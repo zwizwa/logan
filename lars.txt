@@ -1,0 +1,26 @@
+Logic Analyzer in Rust
+
+Entry: la.rs
+Date: Sat Jan 31 11:40:42 EST 2015
+
+So the basic ideas:
+
+- Think of Rust as the implementation + scripting language
+- Keep integration in sigrok in mind
+
+
+This is a built off of the ideas of pyla, a Python + C++ logic
+analyzer.  It worked fine, but still was clumsy in its aproach so I
+started thinkig that Rust might be good as both a core implementation
+language for the signal processors and the dataflow glue.
+
+
+Entry: Synchronicity
+Date: Sat Jan 31 11:43:28 EST 2015
+
+Meaning: is it really necessary to process events from multiple
+sources at the same time?  This is about the only obviou reason to
+_not_ use a task/process abstraction for handling communication
+protocols.
+
+

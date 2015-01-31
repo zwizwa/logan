@@ -11,3 +11,5 @@ Basic ideas:
   - Rust is light-weight enough to run on 32bit bare-metal ARM
     microcontrollers.
 
+  - Don't build a framework, build a library.
+

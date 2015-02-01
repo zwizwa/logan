@@ -46,7 +46,7 @@ mod diff {
 }
 
 mod uart {
-    use la::{Bus,channel,Sink};
+    use la::{Bus,channel};
     
     use self::Mode::*;
     use std::old_io as io;
@@ -124,12 +124,7 @@ mod uart {
             }
         }
     }
-    pub fn frontend(state : &mut Uart, raw : &[u8]) {
-        // println!("size: {}", raw.len());
-        for i in raw.iter() {
-            tick(state, (*i) as usize);
-        }
-    }
+    #[allow(dead_code)]
     pub fn run_stdin() {
         let mut uart = init();
         uart.config.channel = 1;
@@ -138,7 +133,7 @@ mod uart {
             let buf = &mut [0u8; 1024 * 256];
             match i.read(buf) {
                 Err(why) => panic!("{:?}", why),
-                Ok(size) => frontend(&mut uart, &buf[0 .. size]),
+                Ok(size) => for b in buf[0..size].iter() { tick(&mut uart, (*b) as Bus); },
             }
         }
     }
@@ -146,16 +141,14 @@ mod uart {
     #[allow(dead_code)]
     pub fn test(uart : &mut Uart) {
         uart.config.period = 10;
-        frontend(uart, &[1u8; 10]);  // start idle line
         for data in 0us..256 {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0u8..10 {
                 let b = (bits >> i) & 1;
-                let v = [b as u8; 10];
-                frontend(uart, &v);
+                for _ in 0..10 { tick(uart, b); };
             }
-            if (uart.state.reg != data) {
-                panic!("{} != {}", uart.state.reg, data);
+            if uart.state.reg != data {
+                panic!("reg:{} != data:{}", uart.state.reg, data);
             }
         }
     }

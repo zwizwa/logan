@@ -24,3 +24,25 @@ _not_ use a task/process abstraction for handling communication
 protocols.
 
 
+Entry: Threads
+Date: Sat Jan 31 23:51:03 EST 2015
+
+Solve the rest of the dataflow programming using concurrent
+programming?  It seems the most natural approach.  A good trade-off
+between speed and ease of use:
+
+- front-end: processes a lot of data but produces likely very little.
+  a synchronous state machine seems best here.
+
+- back-end: processes little data but might need more elaborate
+  code/data structure to do its job: higher abstraction seems best
+  here.
+
+The question is about task switch granularity.  For 20MHz data rate
+there is no way that this can be anything other than a tight
+single-task loop over a data array.
+
+It would be nice though to abstract the connectivity.  I.e. if I want
+to chain two processors, it will figure out how they pass data.
+
+[1] http://doc.rust-lang.org/std/thread/

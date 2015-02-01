@@ -1,22 +1,69 @@
 #![feature(io)]
-use std::old_io as io;
-    
+
+mod la {
+
+    pub type Bit = usize;
+    pub type Bus = usize;
+
+    pub fn channel(b: Bus, c: usize) -> Bit {
+        (b >> c) & 1
+    }
+
+    // TL;DR: Call flow represents low level call flow.  High level
+    // abstractions build on top of this.
+
+    // From a first iteration in C++ (see zwizwa/pyla), the simplest
+    // architecture seems to be a "push" approach, i.e. a data-driven
+    // / reactive one where a function call corresponds to data being
+    // available.
+
+    // This corresponds best to the actual low-level structure when
+    // this runs on a uC: a DMA transfer_complete interrupt.
+
+    // It is opposed to a "pull" approach where a task blocks until
+    // data is available, which always needs a scheduler.  The pull
+    // approach works best on higher levels, i.e. when parsing
+    // protocols.
+
+    pub trait Sink {
+        fn write(&mut self, &[Bus]);
+    }
+}
+
+
+
+#[allow(dead_code)]
+mod diff {
+    use la::Bus;
+    struct Diff {
+        last: Bus,
+    }
+    pub fn tick(diff: &mut Diff, input: Bus) {
+        let x = input ^ diff.last;
+        diff.last = input;
+        println!("diff: {}", x);
+    }
+}
+
 mod uart {
+    use la::{Bus,channel,Sink};
+    
     use self::Mode::*;
+    use std::old_io as io;
     struct Uart {
         pub config: Config,
         state:  State,
     }
     struct Config {
-        pub period:  u32,    // bit period
-        pub nb_bits: u32,
-        pub channel: u32,
+        pub period:  usize,    // bit period
+        pub nb_bits: usize,
+        pub channel: usize,
     }
     //#[derive(Debug)]
     struct State {
-        reg: u32,  // data shift register
-        bit: u32,  // bit count
-        skip: u32, // skip count to next sample point
+        reg: usize,  // data shift register
+        bit: usize,  // bit count
+        skip: usize, // skip count to next sample point
         mode: Mode,
     }
     //#[derive(Debug)]
@@ -39,7 +86,7 @@ mod uart {
         }
     }
 
-    pub fn tick (uart : &mut Uart, input : u32) {
+    pub fn tick (uart : &mut Uart, input : Bus) {
         let s = &mut uart.state;
         let c = &uart.config;
 
@@ -47,30 +94,32 @@ mod uart {
             s.skip -= 1;
         }
         else {
-            //println!("{:?}", s.mode);
-            let i = (input >> c.channel) & 1;
+            // println!("{:?}", s.mode);
+            let i = channel(input, c.channel);
             match s.mode {
                 Idle => {
                     if i == 0 {
                         s.mode = Shift;
                         s.bit = 0;
-                        s.skip = c.period / 2;
+                        s.skip = c.period + (c.period / 2) - 1;
+                        s.reg = 0;
                     }
                 },
                 Shift => {
-                    s.reg = (s.reg << 1) | i;
-                    s.bit += 1;
-                    s.skip = c.period;
-                    if s.bit > c.nb_bits {
+                    if s.bit < c.nb_bits {
+                        s.reg |= i << s.bit;
+                        s.bit += 1;
+                        s.skip = c.period - 1;
+                    }
+                    else {
                         s.mode = Stop;
                     }
                 },
                 Stop => {
                     if i == 0 { panic!("frame error"); }
-                    println!("data: {}", s.reg);
-                    s.skip = c.period / 2;
+                    println!("uart: {}", s.reg);
+                    s.skip = 0;
                     s.mode = Idle;
-                    s.reg = 0;
                 },
             }
         }
@@ -78,31 +127,40 @@ mod uart {
     pub fn frontend(state : &mut Uart, raw : &[u8]) {
         // println!("size: {}", raw.len());
         for i in raw.iter() {
-            tick(state, (*i) as u32);
+            tick(state, (*i) as usize);
         }
     }
+    pub fn run_stdin() {
+        let mut uart = init();
+        uart.config.channel = 1;
+        let mut i = io::stdin();
+        loop {
+            let buf = &mut [0u8; 1024 * 256];
+            match i.read(buf) {
+                Err(why) => panic!("{:?}", why),
+                Ok(size) => frontend(&mut uart, &buf[0 .. size]),
+            }
+        }
+    }
+    
     #[allow(dead_code)]
-    pub fn test() {
-        let mut state = init();
-        state.config.period = 10;
-        let data : u32 = 0xFFFFFF7F;
-        for i in 0u8..32 {
-            let b = (data >> i) & 1;
-            let v = [b as u8; 10];
-            frontend(&mut state, &v);
+    pub fn test(uart : &mut Uart) {
+        uart.config.period = 10;
+        frontend(uart, &[1u8; 10]);  // start idle line
+        for data in 0us..256 {
+            let bits = (data | 0x100) << 1; // add start, stop bit
+            for i in 0u8..10 {
+                let b = (bits >> i) & 1;
+                let v = [b as u8; 10];
+                frontend(uart, &v);
+            }
+            if (uart.state.reg != data) {
+                panic!("{} != {}", uart.state.reg, data);
+            }
         }
     }
 }
 fn main() {
-    uart::test();
-    let mut state = uart::init();
-    state.config.channel = 1;
-    let mut i = io::stdin();
-    loop {
-        let buf = &mut [0u8; 1024 * 256];
-        match i.read(buf) {
-            Err(why) => panic!("{:?}", why),
-            Ok(size) => uart::frontend(&mut state, &buf[0 .. size]),
-        }
-    }
+    uart::test(&mut uart::init());
+    // uart::run_stdin();
 }

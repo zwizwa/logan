@@ -1,12 +1,13 @@
 #![feature(io)]
 
 mod la {
+    use std::old_io as io;
 
     pub type Bit = usize;
     pub type Bus = usize;
 
-    pub fn channel(b: Bus, c: usize) -> Bit {
-        (b >> c) & 1
+    pub fn channel(b: &Bus, c: usize) -> Bit {
+        (*b >> c) & 1
     }
 
     // TL;DR: Call flow represents low level call flow.  High level
@@ -26,7 +27,20 @@ mod la {
     // protocols.
 
     pub trait Sink {
-        fn write(&mut self, &[Bus]);
+        fn push(&mut self, &Bus);
+
+        fn stdin_u8(&mut self) {
+            let mut i = io::stdin();
+            loop {
+                let buf = &mut [0u8; 1024 * 256];
+                match i.read(buf) {
+                    Err(why) => panic!("{:?}", why),
+                    Ok(size) => for b in buf[0..size].iter() {
+                        Sink::push(self, &((*b) as Bus));
+                    },
+                }
+            }
+        }
     }
 }
 
@@ -46,10 +60,9 @@ mod diff {
 }
 
 mod uart {
-    use la::{Bus,channel};
+    use la::{Bus,Sink,channel};
     
     use self::Mode::*;
-    use std::old_io as io;
     struct Uart {
         pub config: Config,
         state:  State,
@@ -85,8 +98,13 @@ mod uart {
             },
         }
     }
+    impl Sink for Uart {
+        fn push(&mut self, input : &Bus) {
+            tick(self, input);
+        }
+    }
 
-    pub fn tick (uart : &mut Uart, input : Bus) {
+    fn tick (uart : &mut Uart, input : &Bus) {
         let s = &mut uart.state;
         let c = &uart.config;
 
@@ -124,28 +142,14 @@ mod uart {
             }
         }
     }
-    #[allow(dead_code)]
-    pub fn run_stdin() {
-        let mut uart = init();
-        uart.config.channel = 1;
-        let mut i = io::stdin();
-        loop {
-            let buf = &mut [0u8; 1024 * 256];
-            match i.read(buf) {
-                Err(why) => panic!("{:?}", why),
-                Ok(size) => for b in buf[0..size].iter() { tick(&mut uart, (*b) as Bus); },
-            }
-        }
-    }
     
     #[allow(dead_code)]
     pub fn test(uart : &mut Uart) {
-        uart.config.period = 10;
         for data in 0us..256 {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
-                let b = (bits >> i) & 1;
-                for _ in 0..uart.config.period { tick(uart, b); };
+                let b = ((bits >> i) & 1) << uart.config.channel;
+                for _ in 0..uart.config.period { tick(uart, &b); };
             }
             if uart.state.reg != data {
                 panic!("reg:{} != data:{}", uart.state.reg, data);
@@ -154,6 +158,8 @@ mod uart {
     }
 }
 fn main() {
-    uart::test(&mut uart::init());
-    // uart::run_stdin();
+    let mut uart = uart::init();
+    uart.config.channel = 3;
+    uart::test(&mut uart);
+    //la::Sink::stdin_u8(&mut uart);
 }

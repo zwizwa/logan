@@ -46,3 +46,12 @@ It would be nice though to abstract the connectivity.  I.e. if I want
 to chain two processors, it will figure out how they pass data.
 
 [1] http://doc.rust-lang.org/std/thread/
+
+
+Entry: Iterators and buffers
+Date: Sun Feb  1 15:00:12 EST 2015
+
+Is it necessary to include the iterator in the "tick" method of the
+trait that abstracts analyzer state machines?  I'd think that this can
+all be optimized away.  Maybe take the plunge and look at generated code?
+

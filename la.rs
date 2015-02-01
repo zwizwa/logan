@@ -29,10 +29,9 @@ mod la {
     pub trait Sink {
         fn push(&mut self, &Bus);
 
-        fn stdin_u8(&mut self) {
+        fn stdin_u8(&mut self, buf: &mut [u8]) {
             let mut i = io::stdin();
             loop {
-                let buf = &mut [0u8; 1024 * 256];
                 match i.read(buf) {
                     Err(why) => panic!("{:?}", why),
                     Ok(size) => for b in buf[0..size].iter() {
@@ -161,5 +160,5 @@ fn main() {
     let mut uart = uart::init();
     uart.config.channel = 3;
     uart::test(&mut uart);
-    //la::Sink::stdin_u8(&mut uart);
+    la::Sink::stdin_u8(&mut uart, &mut [0u8; 1024 * 256]);
 }

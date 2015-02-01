@@ -143,9 +143,9 @@ mod uart {
         uart.config.period = 10;
         for data in 0us..256 {
             let bits = (data | 0x100) << 1; // add start, stop bit
-            for i in 0u8..10 {
+            for i in 0us..(uart.config.nb_bits+2) {
                 let b = (bits >> i) & 1;
-                for _ in 0..10 { tick(uart, b); };
+                for _ in 0..uart.config.period { tick(uart, b); };
             }
             if uart.state.reg != data {
                 panic!("reg:{} != data:{}", uart.state.reg, data);

@@ -4,10 +4,13 @@ all: la.elf saleae.elf
 RUSTC = rustc
 
 clean:
-	rm -f *.elf *~
+	rm -f *.elf *~ *.ll
 
 %.elf: %.rs
 	$(RUSTC) $< -o $@
+
+%.ll: %.rs
+	$(RUSTC) --emit=llvm-ir $< -o $@
 
 
 SALEAE_VER := 1.1.14

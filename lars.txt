@@ -55,3 +55,26 @@ Is it necessary to include the iterator in the "tick" method of the
 trait that abstracts analyzer state machines?  I'd think that this can
 all be optimized away.  Maybe take the plunge and look at generated code?
 
+
+Entry: Input/Output
+Date: Sun Feb  1 16:58:56 EST 2015
+
+Problem: data types when connecting processing pipelines.  Either
+avoid it by using byte streams and explicit protocols, or figure out a
+way to encode it in the type system.
+
+There seem to be too many variables here to find a good solution.
+
+Attempt to simplify and fix the abstraction levels:
+
+- parallel bit streams
+- sequential byte streams
+- packet streams
+- high level data streams
+
+
+Maybe abstract everything as Bus and provide some wrappers?
+
+Parallelism is necessary: a bus has multiple channels with
+time-correlated data.  A Bus can be a "packet bus" ?
+

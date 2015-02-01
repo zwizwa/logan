@@ -1,8 +1,8 @@
 #![feature(io)]
-
 use std::old_io as io;
     
 mod uart {
+    use self::Mode::*;
     struct Uart {
         pub config: Config,
         state:  State,
@@ -12,12 +12,14 @@ mod uart {
         pub nb_bits: u32,
         pub channel: u32,
     }
+    //#[derive(Debug)]
     struct State {
         reg: u32,  // data shift register
         bit: u32,  // bit count
         skip: u32, // skip count to next sample point
         mode: Mode,
     }
+    //#[derive(Debug)]
     enum Mode {
         Idle, Shift, Stop,
     }
@@ -32,7 +34,7 @@ mod uart {
                 reg:  0,
                 bit:  0,
                 skip: 0,
-                mode: Mode::Idle,
+                mode: Idle,
             },
         }
     }
@@ -40,39 +42,34 @@ mod uart {
     pub fn tick (uart : &mut Uart, input : u32) {
         let s = &mut uart.state;
         let c = &uart.config;
-        
-        // println!("{} {}", s.skip, match s.mode {
-        //     Mode::Idle  => "idle",
-        //     Mode::Shift => "shift",
-        //     Mode::Stop  => "stop",
-        // });
-        
+
         if s.skip > 0 {
             s.skip -= 1;
         }
         else {
+            //println!("{:?}", s.mode);
             let i = (input >> c.channel) & 1;
             match s.mode {
-                Mode::Idle => {
+                Idle => {
                     if i == 0 {
-                        s.mode = Mode::Shift;
+                        s.mode = Shift;
                         s.bit = 0;
                         s.skip = c.period / 2;
                     }
                 },
-                Mode::Shift => {
+                Shift => {
                     s.reg = (s.reg << 1) | i;
                     s.bit += 1;
                     s.skip = c.period;
                     if s.bit > c.nb_bits {
-                        s.mode = Mode::Stop;
+                        s.mode = Stop;
                     }
                 },
-                Mode::Stop => {
+                Stop => {
                     if i == 0 { panic!("frame error"); }
                     println!("data: {}", s.reg);
                     s.skip = c.period / 2;
-                    s.mode = Mode::Idle;
+                    s.mode = Idle;
                     s.reg = 0;
                 },
             }
@@ -97,7 +94,7 @@ mod uart {
     }
 }
 fn main() {
-    //uart::test();
+    uart::test();
     let mut state = uart::init();
     state.config.channel = 1;
     let mut i = io::stdin();

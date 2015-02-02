@@ -78,3 +78,53 @@ Maybe abstract everything as Bus and provide some wrappers?
 Parallelism is necessary: a bus has multiple channels with
 time-correlated data.  A Bus can be a "packet bus" ?
 
+
+
+Entry: Finding the right abstraction is hard
+Date: Sun Feb  1 20:01:15 EST 2015
+
+Trying too much at once.  It's probably best to give up on premature
+optimization and figure out how to type things properly first.  A UART
+is something that takes in a synchronous bit stream and produces a
+(possibly time-tagged) byte stream.
+
+There are two problems here:
+
+- The types
+
+- The I->O control flow.
+
+
+There are three obvious way of structuring:
+
+- As a function (i->o) possibly buffered, leaving connectivity to a
+  different layer.
+
+- As a sink, abstracting composite sinks.
+
+- As a source (generator), chaining generators.
+
+In Pyla I used an i->o approach and added some composition laws to
+build sinks.
+
+DO IT WELL OR DON'T DO IT
+
+
+
+
+
+So I have a design that I already thought about for a long time.  It
+uses byte buffers to communicate, which makes it rather simple,
+structurally.
+
+If types are necessary, why not build those on top of things?
+I.e. use types as "compile time blessing" like phantom types[1].
+
+
+So let's do this: two layers:
+- Implementation, unconstrained uses byte buffers
+- Phantom layer adds typed-blessed composition
+
+
+[1] http://rustbyexample.com/generics/phantom.html
+

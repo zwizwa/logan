@@ -3,12 +3,9 @@
 mod la {
     use std::old_io as io;
 
-    pub type Bit = usize;
-    pub type Bus = usize;
-
-    pub fn channel(b: &Bus, c: usize) -> Bit {
-        (*b >> c) & 1
-    }
+    //pub type Chunk = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
+    pub type Chunk = [u8]; // FIXME: use this until iterators are fixed in rust
+ 
 
     // TL;DR: Call flow represents low level call flow.  High level
     // abstractions build on top of this.
@@ -27,16 +24,14 @@ mod la {
     // protocols.
 
     pub trait Sink {
-        fn push(&mut self, &Bus);
+        fn push(&mut self, &Chunk);
 
         fn stdin_u8(&mut self, buf: &mut [u8]) {
             let mut i = io::stdin();
             loop {
                 match i.read(buf) {
                     Err(why) => panic!("{:?}", why),
-                    Ok(size) => for b in buf[0..size].iter() {
-                        Sink::push(self, &((*b) as Bus));
-                    },
+                    Ok(size) => Sink::push(self, &buf[0..size]),
                 }
             }
         }
@@ -47,11 +42,10 @@ mod la {
 
 #[allow(dead_code)]
 mod diff {
-    use la::Bus;
     struct Diff {
-        last: Bus,
+        last: usize,
     }
-    pub fn tick(diff: &mut Diff, input: Bus) {
+    pub fn tick(diff: &mut Diff, input: usize) {
         let x = input ^ diff.last;
         diff.last = input;
         println!("diff: {}", x);
@@ -59,7 +53,7 @@ mod diff {
 }
 
 mod uart {
-    use la::{Bus,Sink,channel};
+    use la::{Sink};
     
     use self::Mode::*;
     struct Uart {
@@ -97,13 +91,16 @@ mod uart {
             },
         }
     }
+
     impl Sink for Uart {
-        fn push(&mut self, input : &Bus) {
-            tick(self, input);
+        fn push(&mut self, input: &[u8]) {
+            for byte in input.iter() {
+                tick(self, (*byte) as usize);
+            }
         }
     }
 
-    fn tick (uart : &mut Uart, input : &Bus) {
+    fn tick (uart : &mut Uart, bus : usize) {
         let s = &mut uart.state;
         let c = &uart.config;
 
@@ -111,8 +108,7 @@ mod uart {
             s.skip -= 1;
         }
         else {
-            // println!("{:?}", s.mode);
-            let i = channel(input, c.channel);
+            let i = bus >> c.channel;
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -148,7 +144,7 @@ mod uart {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
                 let b = ((bits >> i) & 1) << uart.config.channel;
-                for _ in 0..uart.config.period { tick(uart, &b); };
+                for _ in 0..uart.config.period { tick(uart, b); };
             }
             if uart.state.reg != data {
                 panic!("reg:{} != data:{}", uart.state.reg, data);

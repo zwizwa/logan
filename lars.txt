@@ -128,3 +128,14 @@ So let's do this: two layers:
 
 [1] http://rustbyexample.com/generics/phantom.html
 
+
+Entry: Iterators
+Date: Sun Feb  1 22:39:36 EST 2015
+
+Tired, but I really want to get to the bottom of this.  Apparently
+passing around iterators doesn't work very well, maybe because they
+are stateful, abstract objects?
+
+So it seems better to pass something around that can create an
+iterator.  Especially because I want the ability to provide fanout.
+

@@ -5,7 +5,7 @@ mod la {
 
     //pub type Chunk = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
     pub type Chunk = [u8]; // FIXME: use this until iterators are fixed in rust
- 
+
 
     // TL;DR: Call flow represents low level call flow.  High level
     // abstractions build on top of this.
@@ -37,6 +37,24 @@ mod la {
         }
     }
 }
+
+
+// Implement stdin as an iterator of buffers.
+// struct Stdin {
+//     stream: std::old_io::stdio::StdReader,
+//     buf: Vec<u8>,
+// }
+// impl Iterator for Stdin {
+//     type Item = Vec<u8>;
+//     fn next(&self) {
+//         match self.stream.read(self.buf) {
+//             Err(why) => None,
+//             Ok(size) => Some(self.buf[0..size]),
+//         }
+//     }
+// }
+    
+
 
 
 

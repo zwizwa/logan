@@ -40,16 +40,22 @@ mod la {
 
 
 // Implement stdin as an iterator of buffers.
-struct Stdin<'a> {
+struct Stdin {
     stream: std::old_io::stdio::StdReader,
-    buf: &'a mut[u8],
+    buf: [u8],
 }
-impl<'a> Iterator for Stdin<'a> {
-    type Item = &'a[u8];
-    fn next(&'a mut self) -> Option<Iterator::Item> {
-        match self.stream.read(self.buf) {
+// fn stdin_next<'a>(stdin: &'a mut Stdin) -> Option<&'a [u8]> {
+//     match stdin.stream.read(&mut stdin.buf) {
+//         Err(why) => None,
+//         Ok(size) => Some(&stdin.buf[0..size]),
+//     }
+// }
+impl<'b> Iterator for Stdin {
+    type Item = &'b[u8];
+    fn next<'a>(&'a mut self) -> Option<&'a [u8]> {
+        match self.stream.read(&mut self.buf) {
             Err(why) => None,
-            Ok(size) => Some(self.buf),
+            Ok(size) => Some(&self.buf[0..size]),
         }
     }
 }

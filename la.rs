@@ -40,19 +40,19 @@ mod la {
 
 
 // Implement stdin as an iterator of buffers.
-// struct Stdin {
-//     stream: std::old_io::stdio::StdReader,
-//     buf: Vec<u8>,
-// }
-// impl Iterator for Stdin {
-//     type Item = Vec<u8>;
-//     fn next(&self) {
-//         match self.stream.read(self.buf) {
-//             Err(why) => None,
-//             Ok(size) => Some(self.buf[0..size]),
-//         }
-//     }
-// }
+struct Stdin<'a> {
+    stream: std::old_io::stdio::StdReader,
+    buf: &'a mut[u8],
+}
+impl<'a> Iterator for Stdin<'a> {
+    type Item = &'a[u8];
+    fn next(&'a mut self) -> Option<Iterator::Item> {
+        match self.stream.read(self.buf) {
+            Err(why) => None,
+            Ok(size) => Some(self.buf),
+        }
+    }
+}
     
 
 

@@ -1,8 +1,8 @@
 #![feature(io)]
 
-mod la {
-    use std::old_io as io;
+use std::old_io as io;
 
+mod la {
     //pub type Chunk = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
     pub type Chunk = [u8]; // FIXME: use this until iterators are fixed in rust
 
@@ -25,36 +25,20 @@ mod la {
 
     pub trait Sink {
         fn push(&mut self, &Chunk);
-
-        fn stdin_u8(&mut self, buf: &mut [u8]) {
-            let mut i = io::stdin();
-            loop {
-                match i.read(buf) {
-                    Err(why) => panic!("{:?}", why),
-                    Ok(size) => Sink::push(self, &buf[0..size]),
-                }
-            }
-        }
     }
 }
 
 
-// Implement stdin as an iterator of buffers.
+// Expose stdin as a sequence of buffers.
 struct Stdin {
-    stream: std::old_io::stdio::StdReader,
-    buf: [u8],
+    stream: std::old_io::stdio::StdinReader,
+    buf: [u8; 262144],
 }
-// fn stdin_next<'a>(stdin: &'a mut Stdin) -> Option<&'a [u8]> {
-//     match stdin.stream.read(&mut stdin.buf) {
-//         Err(why) => None,
-//         Ok(size) => Some(&stdin.buf[0..size]),
-//     }
-// }
 impl<'b> Iterator for Stdin {
     type Item = &'b[u8];
     fn next<'a>(&'a mut self) -> Option<&'a [u8]> {
         match self.stream.read(&mut self.buf) {
-            Err(why) => None,
+            Err(_) => None,
             Ok(size) => Some(&self.buf[0..size]),
         }
     }
@@ -164,11 +148,14 @@ mod uart {
     
     #[allow(dead_code)]
     pub fn test(uart : &mut Uart) {
+        let mut buf = [0u8; 100];
+        uart.config.period = buf.len();
         for data in 0us..256 {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
-                let b = ((bits >> i) & 1) << uart.config.channel;
-                for _ in 0..uart.config.period { tick(uart, b); };
+                let bit = ((bits >> i) & 1) << uart.config.channel;
+                for b in buf.iter_mut() { *b = bit as u8 };
+                Sink::push(uart, &buf);
             }
             if uart.state.reg != data {
                 panic!("reg:{} != data:{}", uart.state.reg, data);
@@ -180,5 +167,12 @@ fn main() {
     let mut uart = uart::init();
     uart.config.channel = 3;
     uart::test(&mut uart);
-    la::Sink::stdin_u8(&mut uart, &mut [0u8; 1024 * 256]);
+
+    let mut stdin = Stdin {
+        stream: io::stdin(),
+        buf:[0u8; 262144],
+    };
+    for buf in stdin {
+        la::Sink::push(&mut uart, buf);
+    }
 }

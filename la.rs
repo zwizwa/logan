@@ -98,12 +98,13 @@ mod uart {
     }
 
     // Export behavior as iterator.
-    struct Stream<'a, I: Iterator<Item=u8>> {
+    struct Stream<'a, I: Iterator<Item=usize>> {
         uart: Env,
         iter: I,
     }
+    // TODO: generalize "trickle" map over state machine.  None,None,Some,None,....
     impl<'a,I> Iterator for Stream<'a,I> where
-        I: Iterator<Item=u8>,
+        I: Iterator<Item=usize>,
     {
         type Item = usize;
         fn next(&mut self) -> Option<usize> {
@@ -119,7 +120,7 @@ mod uart {
         }
     }
     pub fn stream<'a,I>(i: I) -> Stream<'a,I> where
-        I:Iterator<Item=u8>,
+        I:Iterator<Item=usize>,
     {
         Stream {
             uart: init(),
@@ -131,7 +132,31 @@ mod uart {
 
     
     #[allow(dead_code)]
+
     pub fn test(uart : &mut Env) {
+        let period = uart.config.period;
+        let word = uart.config.nb_bits;
+
+        //let bits_bit   = |:v:usize| (0..period).map(|_| v);
+        //let bits_frame = |:v:usize| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1);
+
+        // let bitstream  =
+        //     (0..256)
+        //     .flat_map(bits_frame)
+        //     .flat_map(bits_bit);
+
+        // for b in stream(
+        //         (0us..256)
+        //         .flat_map(|v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1))
+        //         .flat_map(|v| (0..period).map(|_| v))) {
+        //     println!("data {}", b);
+        // }
+
+        for b in stream(0us..1000) {
+            println!("data {}", b);
+        }
+        
+        
         for data in 0us..256 {
             // let check_data = |&:data_out : usize| {
             //     if data_out != data {
@@ -141,25 +166,21 @@ mod uart {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
                 let bit = ((bits >> i) & 1) << uart.config.channel;
-                for b in 0..uart.config.period {
-                    match tick(uart, b) {
+                for _ in 0..uart.config.period {
+                    match tick(uart, bit) {
                         None => (),
                         Some(out_data) => 
                             if out_data != data {
-                                panic!("reg:{} != data:{}", out_data, data)
-                            },
+                                panic!("out_data:{} != in_data:{}", out_data, data)
+                            } else {
+                                println!("out_data:{}", out_data)
+                            }
+                       
                     }
                 }
             }
         }
     }
-}
-fn main() {
-    let mut uart = uart::init();
-    uart.config.channel = 3;
-    uart::test(&mut uart);
-
-    let buf = [0u8; 262144];
 }
 
 mod io {
@@ -167,21 +188,21 @@ mod io {
 
     /* Manually buffered standard input.  Buffer size such that write from
     Saleae driver doesn't need to be chunked. */
-    struct Stdin {
+    struct Stdin8 {
         stream: old_io::stdio::StdinReader,
         buf: [u8; 262144],
         offset: usize, // FIXME: couldn't figure out how to use slices.
         nb: usize,
     }
-    impl Iterator for Stdin {
-        type Item = u8;
-        fn next(&mut self) -> Option<u8> {
+    impl Iterator for Stdin8 {
+        type Item = usize;
+        fn next(&mut self) -> Option<usize> {
             loop {
                 let o = self.offset;
                 if o < self.nb {
                     let rv = self.buf[o];
                     self.offset += 1;
-                    return Some(rv);
+                    return Some(rv as usize);
                 }
                 match self.stream.read(&mut self.buf) {
                     Err(_) => return None,
@@ -193,13 +214,23 @@ mod io {
             }
         }
     }
-    pub fn stdin<'a>() -> Stdin {
-        Stdin {
+    pub fn stdin8<'a>() -> Stdin8 {
+        Stdin8 {
             stream: old_io::stdin(),
             buf: [0u8; 262144],
             offset: 0,
             nb: 0,
         }
+    }
+}
+
+fn main() {
+    let mut uart = uart::init();
+    uart.config.channel = 3;
+    uart::test(&mut uart);
+
+    for b in uart::stream(io::stdin8()) {
+        println!("data {}", b);
     }
 }
 

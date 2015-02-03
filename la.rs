@@ -1,6 +1,6 @@
 #![feature(io)]
 
-use std::old_io as io;
+use std::old_io as old_io;
 extern crate core;
 
 mod la {
@@ -12,6 +12,10 @@ mod la {
         fn process(&mut self, &Input, Output);
     }
 }
+
+
+
+
 
 pub struct UartProc<'a, I: Iterator<Item=&'a [u8]>> {
     uart: uart::Env,
@@ -89,16 +93,12 @@ mod uart {
             },
         }
     }
-    
-    pub fn process(uart: &mut Env, input: &Input) {
-        for byte in input.iter() {
-            tick(uart, (*byte) as usize);
-        }
-    }
 
-    fn tick (uart: &mut Env, input: usize)  {
+    fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
         let s = &mut uart.state;
         let c = &uart.config;
+
+        let mut rv = None;
 
         if s.skip > 0 {
             s.skip -= 1;
@@ -126,21 +126,19 @@ mod uart {
                 },
                 Stop => {
                     if i == 0 { panic!("frame error"); }
-                    // output(s.reg);
-                    println!("data {}", s.reg);
+                    rv = Some(s.reg);
                     s.skip = 0;
                     s.mode = Idle;
                 },
             }
         }
+        rv
     }
 
 
     
     #[allow(dead_code)]
     pub fn test(uart : &mut Env) {
-        let mut buf = [0u8; 100];
-        uart.config.period = buf.len();
         for data in 0us..256 {
             // let check_data = |&:data_out : usize| {
             //     if data_out != data {
@@ -150,11 +148,15 @@ mod uart {
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
                 let bit = ((bits >> i) & 1) << uart.config.channel;
-                for b in buf.iter_mut() { *b = bit as u8 };
-                process(uart, &buf);
-            }
-            if uart.state.reg != data {
-                panic!("reg:{} != data:{}", uart.state.reg, data);
+                for b in 0..uart.config.period {
+                    match tick(uart, b) {
+                        None => (),
+                        Some(out_data) => 
+                            if out_data != data {
+                                panic!("reg:{} != data:{}", out_data, data)
+                            },
+                    }
+                }
             }
         }
     }
@@ -164,31 +166,53 @@ fn main() {
     uart.config.channel = 3;
     uart::test(&mut uart);
 
-    let mut stdin = Stdin {
-        stream: io::stdin(),
-        buf:[0u8; 262144],
-    };
-    fn data(b: usize) { println!("data: {}",b); }
+    let buf = [0u8; 262144];
+}
 
-    for buf in stdin {
-        uart::process(&mut uart, buf);
+mod io {
+    use std::old_io;
+
+    /* Manually buffered standard input.  Buffer size such that write from
+    Saleae driver doesn't need to be chunked. */
+    struct Stdin {
+        stream: old_io::stdio::StdinReader,
+        buf: [u8; 262144],
+        offset: usize, // FIXME: couldn't figure out how to use slices.
+        nb: usize,
     }
-}
-
-// Expose stdin as a sequence of buffers.
-struct Stdin {
-    stream: std::old_io::stdio::StdinReader,
-    buf: [u8; 262144],
-}
-impl<'b> Iterator for Stdin {
-    type Item = &'b[u8];
-    fn next<'a>(&'a mut self) -> Option<&'a [u8]> {
-        match self.stream.read(&mut self.buf) {
-            Err(_) => None,
-            Ok(size) => Some(&self.buf[0..size]),
+    impl Iterator for Stdin {
+        type Item = u8;
+        fn next(&mut self) -> Option<u8> {
+            loop {
+                let o = self.offset;
+                if o < self.nb {
+                    let rv = self.buf[o];
+                    self.offset += 1;
+                    return Some(rv);
+                }
+                match self.stream.read(&mut self.buf) {
+                    Err(_) => return None,
+                    Ok(nb) => {
+                        self.offset = 0;
+                        self.nb = nb;
+                    }
+                }
+            }
+        }
+    }
+    pub fn stdin<'a>() -> Stdin {
+        Stdin {
+            stream: old_io::stdin(),
+            buf: [0u8; 262144],
+            offset: 0,
+            nb: 0,
         }
     }
 }
+
+
+
+
     
 // // Expose uart as a sequence of bytes
 // struct Uart<I> {

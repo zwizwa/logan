@@ -134,36 +134,26 @@ mod uart {
     #[allow(dead_code)]
 
     pub fn test(uart : &mut Env) {
-        let period = uart.config.period;
-        let word = uart.config.nb_bits;
 
-        //let bits_bit   = |:v:usize| (0..period).map(|_| v);
-        //let bits_frame = |:v:usize| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1);
+        // FIXME: get this nicer version to work.  Doesn't specialize
+        // properly + some lifetime issues for the closures.
+        
+        // let period = uart.config.period;
+        // let word = uart.config.nb_bits;
 
-        // let bitstream  =
+        // let bits_bit   = |v| (0..period).map(|_| v);
+        // let bits_frame = |v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1);
+
+        // let samples  =
         //     (0..256)
         //     .flat_map(bits_frame)
         //     .flat_map(bits_bit);
 
-        for b in stream(
-                (0us..256)
-                .flat_map(|v:usize| (0us..word+2).map(|bit:usize| (((v | (1 << word)) << 1) >> bit) & 1).collect())
-                .flat_map(|v:usize| (0us..period).map(|_:usize| v).collect())
-                ) {
-            println!("data {}", b);
-        }
+        // for b in stream(samples) {
+        //     println!("data {}", b);
+        // }
 
-        for b in stream(0us..1000) {
-            println!("data {}", b);
-        }
-        
-        
         for data in 0us..256 {
-            // let check_data = |&:data_out : usize| {
-            //     if data_out != data {
-            //         panic!("check_data: {} != {}", data_out, data);
-            //     }
-            // };
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
                 let bit = ((bits >> i) & 1) << uart.config.channel;
@@ -173,14 +163,12 @@ mod uart {
                         Some(out_data) => 
                             if out_data != data {
                                 panic!("out_data:{} != in_data:{}", out_data, data)
-                            } else {
-                                println!("out_data:{}", out_data)
                             }
-                       
                     }
                 }
             }
         }
+        println!("Test OK");
     }
 }
 

@@ -1,10 +1,7 @@
 #![feature(io)]
-#![feature(core)]
-
-extern crate core;
 
 mod la {
-    /* A Logic Analyzer is built out of:
+    /* A Logic Analyzer is a sequence processor built out of:
        - Proc: a rate-reducing state machine: feed in an element, produce 0 or more results.
        - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence. */
 
@@ -22,17 +19,18 @@ mod la {
     { ProcMap { s: s, p: p } }
 
     // Functionality is in the trait implementation.
+    // The inner loop runs until tick produces something, marked (*)
     impl<I,S,P,O> Iterator for ProcMap<I,S,P,O> where
         S: Iterator<Item=I>,
         P: Proc<I,O>,
     {
         type Item = O;
         fn next(&mut self) -> Option<O> {
-            loop {
+            loop { // (*)
                 match self.s.next() {
                     None => return None,
                     Some(input) => match self.p.tick(input) {
-                        None => (),
+                        None => (), // (*)
                         rv => return rv,
                     },
                 }
@@ -57,15 +55,16 @@ mod diff {
 mod uart {
 
     // Analyzer config and state data structures.
+    use la::Proc;
     use self::Mode::*;
-    pub struct Env {
-        pub config: Config,
-        state:  State,
-    }
-    struct Config {
+    pub struct Config {
         pub period:  usize,    // bit period
         pub nb_bits: usize,
         pub channel: usize,
+    }
+    struct Env {
+        pub config: Config,
+        state:  State,
     }
     struct State {
         reg: usize,  // data shift register
@@ -76,13 +75,9 @@ mod uart {
     enum Mode {
         Idle, Shift, Stop,
     }
-    pub fn init() -> Env {
+    pub fn init(config: Config) -> Env {
         Env {
-            config: Config {
-                period:  1000,
-                nb_bits: 8,
-                channel: 0,
-            },
+            config: config,
             state: State {
                 reg:  0,
                 bit:  0,
@@ -93,7 +88,9 @@ mod uart {
     }
 
     // Process a single byte, output word when ready.
-    #[inline]
+    impl Proc<usize,usize> for Env {
+        fn tick(&mut self, i:usize) -> Option<usize> { tick(self, i) }
+    }
     fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
         let s = &mut uart.state;
         let c = &uart.config;
@@ -135,43 +132,7 @@ mod uart {
         rv
     }
 
-    
-    
-    
-
-    // Export behavior as iterator.
-    struct Stream<'a, I: Iterator<Item=usize>> {
-        uart: Env,
-        iter: I,
-    }
-    // TODO: generalize "trickle" map over state machine.  None,None,Some,None,....
-    impl<'a,I> Iterator for Stream<'a,I> where
-        I: Iterator<Item=usize>,
-    {
-        type Item = usize;
-        fn next(&mut self) -> Option<usize> {
-            loop {
-                match self.iter.next() {
-                    None => return None,
-                    Some(bit) => match tick(&mut self.uart, bit as usize) {
-                        None => (),
-                        rv => return rv,
-                    },
-                }
-            }
-        }
-    }
-    pub fn stream<'a,I>(i: I) -> Stream<'a,I> where
-        I:Iterator<Item=usize>,
-    {
-        Stream {
-            uart: init(),
-            iter: i,
-        }
-    }
-
-    // TODO: use FlatMap
-
+    // FIXME: generalize over all native integer sizes
     
     #[allow(dead_code)]
 
@@ -256,30 +217,17 @@ mod io {
 }
 
 fn main() {
-    let mut uart = uart::init();
-    uart.config.channel = 3;
+    let config = uart::Config {
+        period:  1000,
+        nb_bits: 8,
+        channel: 3,
+    };
+    let mut uart = uart::init(config);
     uart::test(&mut uart);
 
-    for b in uart::stream(io::stdin8()) {
+    for b in la::proc_map(uart, io::stdin8()) {
         println!("data {}", b);
     }
 }
 
 
-
-
-    
-// // Expose uart as a sequence of bytes
-// struct Uart<I> {
-//     env: uart::Env,
-// }
-
-// impl<'b> Iterator for Uart {
-//     type Item = usize;
-//     fn next<'a>(&'a mut self) -> Option<usize> {
-//         match self.stream.read(&mut self.buf) {
-//             Err(_) => None,
-//             Ok(size) => Some(&self.buf[0..size]),
-//         }
-//     }
-// }

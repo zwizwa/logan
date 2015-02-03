@@ -111,6 +111,9 @@ mod uart {
                     if i == 0 {
                         s.mode = Shift;
                         s.bit = 0;
+                        /* Delay sample clock by half a bit period to
+                           give time for transition to settle.  What
+                           would be optimal? */
                         s.skip = c.period + (c.period / 2) - 1;
                         s.reg = 0;
                     }
@@ -126,8 +129,9 @@ mod uart {
                     }
                 },
                 Stop => {
-                    if i == 0 { panic!("frame error"); }
-                    rv = Some(s.reg);
+                    if i == 0 { println!("frame_error: s.reg = 0x{:x}", s.reg); }
+                    else { rv = Some(s.reg); }
+
                     s.skip = 0;
                     s.mode = Idle;
                 },
@@ -237,6 +241,7 @@ fn main_uart() {
     }
 }
 
+#[allow(dead_code)]
 fn main_diff() {
     use std::old_io;
     let mut out = old_io::stdout();
@@ -255,6 +260,6 @@ fn main_diff() {
 }
 
 fn main() {
-    // main_uart();
-    main_diff();
+    main_uart();
+    // main_diff();
 }

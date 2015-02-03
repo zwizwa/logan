@@ -216,22 +216,20 @@ mod io {
     }
 }
 
+
 fn main() {
     // Can't get to 20Mhz on X201
     let samplerate = 4000000us;
     let baud = 9600us;
-    let config = uart::Config {
+    
+    let uart = uart::init(uart::Config {
         period:  samplerate / baud,
         nb_bits: 8,
         channel: 3,
-    };
-    println!("period = {}", config.period);
-
-    let mut uart = uart::init(config);
+    });
     // uart::test(&mut uart);
-
     for b in la::proc_map(uart, io::stdin8()) {
-        println!("data {}", b);
+        print!("{}", (b as u8) as char);
     }
 }
 

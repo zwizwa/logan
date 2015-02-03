@@ -3,6 +3,43 @@
 
 extern crate core;
 
+mod la {
+    /* A Logic Analyzer is built out of:
+       - Proc: a rate-reducing state machine: feed in an element, produce 0 or more results.
+       - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence. */
+
+    pub trait Proc<I,O> {
+        fn tick(&mut self, I) -> Option<O>;
+    }
+
+    // Boiler plate: iterator state and public constructor.
+    struct ProcMap<I,S,P,O>
+        where S: Iterator<Item=I>, P: Proc<I,O>
+    { s: S, p: P, }
+    
+    pub fn proc_map<I,S,P,O>(p: P, s: S) -> ProcMap<I,S,P,O>
+        where S: Iterator<Item=I>, P: Proc<I,O>,
+    { ProcMap { s: s, p: p } }
+
+    // Functionality is in the trait implementation.
+    impl<I,S,P,O> Iterator for ProcMap<I,S,P,O> where
+        S: Iterator<Item=I>,
+        P: Proc<I,O>,
+    {
+        type Item = O;
+        fn next(&mut self) -> Option<O> {
+            loop {
+                match self.s.next() {
+                    None => return None,
+                    Some(input) => match self.p.tick(input) {
+                        None => (),
+                        rv => return rv,
+                    },
+                }
+            }
+        }
+    }
+}
 
 
 #[allow(dead_code)]
@@ -56,6 +93,7 @@ mod uart {
     }
 
     // Process a single byte, output word when ready.
+    #[inline]
     fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
         let s = &mut uart.state;
         let c = &uart.config;
@@ -96,6 +134,10 @@ mod uart {
         }
         rv
     }
+
+    
+    
+    
 
     // Export behavior as iterator.
     struct Stream<'a, I: Iterator<Item=usize>> {

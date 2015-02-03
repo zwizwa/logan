@@ -43,6 +43,14 @@ int main( int argc, char *argv[] ) {
     DevicesManagerInterface::RegisterOnConnect( &OnConnect );
     DevicesManagerInterface::RegisterOnDisconnect( &OnDisconnect );
     DevicesManagerInterface::BeginConnect();
+
+    if (argc > 2) {
+        LOG("usage: %s <samplerate>\n", argv[0]);
+        exit(1);
+    }
+    if (argc == 2) {
+        gSampleRateHz = atoi(argv[1]);
+    }
     
     LOG("Samplerate %d\n", gSampleRateHz);
 

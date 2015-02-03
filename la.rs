@@ -2,24 +2,23 @@
 
 mod la {
     /* A Logic Analyzer is a sequence processor built out of:
-       - Proc: a rate-reducing state machine: feed in an element, produce 0 or more results.
+       - Proc: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
        - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence. */
 
     pub trait Proc<I,O> {
         fn tick(&mut self, I) -> Option<O>;
     }
 
-    // Boiler plate: iterator state and public constructor.
+    pub fn proc_map<I,S,P,O>(process: P, stream: S) -> ProcMap<I,S,P,O>
+        where S: Iterator<Item=I>, P: Proc<I,O>,
+    { ProcMap { s: stream, p: process } }
+
+    // Functionality is in the trait implementation.
+    // The inner loop runs until tick produces something, marked (*)
     struct ProcMap<I,S,P,O>
         where S: Iterator<Item=I>, P: Proc<I,O>
     { s: S, p: P, }
     
-    pub fn proc_map<I,S,P,O>(p: P, s: S) -> ProcMap<I,S,P,O>
-        where S: Iterator<Item=I>, P: Proc<I,O>,
-    { ProcMap { s: s, p: p } }
-
-    // Functionality is in the trait implementation.
-    // The inner loop runs until tick produces something, marked (*)
     impl<I,S,P,O> Iterator for ProcMap<I,S,P,O> where
         S: Iterator<Item=I>,
         P: Proc<I,O>,

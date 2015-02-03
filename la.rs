@@ -1,44 +1,7 @@
 #![feature(io)]
+#![feature(core)]
 
-use std::old_io as old_io;
 extern crate core;
-
-mod la {
-    //pub type Input = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
-    pub type Input = [u8]; // FIXME: use this until iterators are fixed in rust
-    pub type Output<'a> = FnMut(usize)+'a;
-
-    pub trait Sink {
-        fn process(&mut self, &Input, Output);
-    }
-}
-
-
-
-
-
-pub struct UartProc<'a, I: Iterator<Item=&'a [u8]>> {
-    uart: uart::Env,
-    iter: I,
-    biter: core::slice::Iter<'a, u8>,
-}
-
-impl<'a,I> Iterator for UartProc<'a,I> where
-    I: Iterator<Item=&'a [u8]>,
-{
-    type Item = usize;
-    fn next(&mut self) -> Option<usize> {
-        loop {
-            match self.biter.next() {
-                None => match self.iter.next() {
-                    None => return None,
-                    Some(bs) => self.biter = bs.iter(),
-                },
-                Some(b) => return Some((*b) as usize),
-            }
-        }
-    }
-}                
 
 
 
@@ -55,8 +18,8 @@ mod diff {
 }
 
 mod uart {
-    use la::{Sink,Input,Output};
-    
+
+    // Analyzer config and state data structures.
     use self::Mode::*;
     pub struct Env {
         pub config: Config,
@@ -67,14 +30,12 @@ mod uart {
         pub nb_bits: usize,
         pub channel: usize,
     }
-    //#[derive(Debug)]
     struct State {
         reg: usize,  // data shift register
         bit: usize,  // bit count
         skip: usize, // skip count to next sample point
         mode: Mode,
     }
-    //#[derive(Debug)]
     enum Mode {
         Idle, Shift, Stop,
     }
@@ -94,6 +55,7 @@ mod uart {
         }
     }
 
+    // Process a single byte, output word when ready.
     fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
         let s = &mut uart.state;
         let c = &uart.config;
@@ -135,6 +97,37 @@ mod uart {
         rv
     }
 
+    // Export behavior as iterator.
+    struct Stream<'a, I: Iterator<Item=u8>> {
+        uart: Env,
+        iter: I,
+    }
+    impl<'a,I> Iterator for Stream<'a,I> where
+        I: Iterator<Item=u8>,
+    {
+        type Item = usize;
+        fn next(&mut self) -> Option<usize> {
+            loop {
+                match self.iter.next() {
+                    None => return None,
+                    Some(bit) => match tick(&mut self.uart, bit as usize) {
+                        None => (),
+                        rv => return rv,
+                    },
+                }
+            }
+        }
+    }
+    pub fn stream<'a,I>(i: I) -> Stream<'a,I> where
+        I:Iterator<Item=u8>,
+    {
+        Stream {
+            uart: init(),
+            iter: i,
+        }
+    }
+
+    // TODO: use FlatMap
 
     
     #[allow(dead_code)]

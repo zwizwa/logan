@@ -1,50 +1,40 @@
 #![feature(io)]
 
 use std::old_io as io;
+extern crate core;
 
 mod la {
-    //pub type Chunk = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
-    pub type Chunk = [u8]; // FIXME: use this until iterators are fixed in rust
-
-
-    // TL;DR: Call flow represents low level call flow.  High level
-    // abstractions build on top of this.
-
-    // From a first iteration in C++ (see zwizwa/pyla), the simplest
-    // architecture seems to be a "push" approach, i.e. a data-driven
-    // / reactive one where a function call corresponds to data being
-    // available.
-
-    // This corresponds best to the actual low-level structure when
-    // this runs on a uC: a DMA transfer_complete interrupt.
-
-    // It is opposed to a "pull" approach where a task blocks until
-    // data is available, which always needs a scheduler.  The pull
-    // approach works best on higher levels, i.e. when parsing
-    // protocols.
+    //pub type Input = &Iterator<Item=&u8>;   // FIXME: lifetime specifier?
+    pub type Input = [u8]; // FIXME: use this until iterators are fixed in rust
+    pub type Output<'a> = FnMut(usize)+'a;
 
     pub trait Sink {
-        fn push(&mut self, &Chunk);
+        fn process(&mut self, &Input, Output);
     }
 }
 
-
-// Expose stdin as a sequence of buffers.
-struct Stdin {
-    stream: std::old_io::stdio::StdinReader,
-    buf: [u8; 262144],
+pub struct UartProc<'a, I: Iterator<Item=&'a [u8]>> {
+    uart: uart::Env,
+    iter: I,
+    biter: core::slice::Iter<'a, u8>,
 }
-impl<'b> Iterator for Stdin {
-    type Item = &'b[u8];
-    fn next<'a>(&'a mut self) -> Option<&'a [u8]> {
-        match self.stream.read(&mut self.buf) {
-            Err(_) => None,
-            Ok(size) => Some(&self.buf[0..size]),
+
+impl<'a,I> Iterator for UartProc<'a,I> where
+    I: Iterator<Item=&'a [u8]>,
+{
+    type Item = usize;
+    fn next(&mut self) -> Option<usize> {
+        loop {
+            match self.biter.next() {
+                None => match self.iter.next() {
+                    None => return None,
+                    Some(bs) => self.biter = bs.iter(),
+                },
+                Some(b) => return Some((*b) as usize),
+            }
         }
     }
-}
-    
-
+}                
 
 
 
@@ -61,10 +51,10 @@ mod diff {
 }
 
 mod uart {
-    use la::{Sink};
+    use la::{Sink,Input,Output};
     
     use self::Mode::*;
-    struct Uart {
+    pub struct Env {
         pub config: Config,
         state:  State,
     }
@@ -84,8 +74,8 @@ mod uart {
     enum Mode {
         Idle, Shift, Stop,
     }
-    pub fn init() -> Uart {
-        Uart {
+    pub fn init() -> Env {
+        Env {
             config: Config {
                 period:  1000,
                 nb_bits: 8,
@@ -99,16 +89,14 @@ mod uart {
             },
         }
     }
-
-    impl Sink for Uart {
-        fn push(&mut self, input: &[u8]) {
-            for byte in input.iter() {
-                tick(self, (*byte) as usize);
-            }
+    
+    pub fn process(uart: &mut Env, input: &Input) {
+        for byte in input.iter() {
+            tick(uart, (*byte) as usize);
         }
     }
 
-    fn tick (uart : &mut Uart, bus : usize) {
+    fn tick (uart: &mut Env, input: usize)  {
         let s = &mut uart.state;
         let c = &uart.config;
 
@@ -116,7 +104,7 @@ mod uart {
             s.skip -= 1;
         }
         else {
-            let i = bus >> c.channel;
+            let i = input >> c.channel;
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -138,24 +126,32 @@ mod uart {
                 },
                 Stop => {
                     if i == 0 { panic!("frame error"); }
-                    println!("uart: {}", s.reg);
+                    // output(s.reg);
+                    println!("data {}", s.reg);
                     s.skip = 0;
                     s.mode = Idle;
                 },
             }
         }
     }
+
+
     
     #[allow(dead_code)]
-    pub fn test(uart : &mut Uart) {
+    pub fn test(uart : &mut Env) {
         let mut buf = [0u8; 100];
         uart.config.period = buf.len();
         for data in 0us..256 {
+            // let check_data = |&:data_out : usize| {
+            //     if data_out != data {
+            //         panic!("check_data: {} != {}", data_out, data);
+            //     }
+            // };
             let bits = (data | 0x100) << 1; // add start, stop bit
             for i in 0us..(uart.config.nb_bits+2) {
                 let bit = ((bits >> i) & 1) << uart.config.channel;
                 for b in buf.iter_mut() { *b = bit as u8 };
-                Sink::push(uart, &buf);
+                process(uart, &buf);
             }
             if uart.state.reg != data {
                 panic!("reg:{} != data:{}", uart.state.reg, data);
@@ -172,7 +168,39 @@ fn main() {
         stream: io::stdin(),
         buf:[0u8; 262144],
     };
+    fn data(b: usize) { println!("data: {}",b); }
+
     for buf in stdin {
-        la::Sink::push(&mut uart, buf);
+        uart::process(&mut uart, buf);
     }
 }
+
+// Expose stdin as a sequence of buffers.
+struct Stdin {
+    stream: std::old_io::stdio::StdinReader,
+    buf: [u8; 262144],
+}
+impl<'b> Iterator for Stdin {
+    type Item = &'b[u8];
+    fn next<'a>(&'a mut self) -> Option<&'a [u8]> {
+        match self.stream.read(&mut self.buf) {
+            Err(_) => None,
+            Ok(size) => Some(&self.buf[0..size]),
+        }
+    }
+}
+    
+// // Expose uart as a sequence of bytes
+// struct Uart<I> {
+//     env: uart::Env,
+// }
+
+// impl<'b> Iterator for Uart {
+//     type Item = usize;
+//     fn next<'a>(&'a mut self) -> Option<usize> {
+//         match self.stream.read(&mut self.buf) {
+//             Err(_) => None,
+//             Ok(size) => Some(&self.buf[0..size]),
+//         }
+//     }
+// }

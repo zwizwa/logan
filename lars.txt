@@ -139,3 +139,29 @@ are stateful, abstract objects?
 So it seems better to pass something around that can create an
 iterator.  Especially because I want the ability to provide fanout.
 
+
+Entry: Push vs. pull
+Date: Mon Feb  2 13:57:25 EST 2015
+
+
+    // TL;DR: Call flow represents low level call flow.  High level
+    // abstractions build on top of this.
+
+    // From a first iteration in C++ (see zwizwa/pyla), the simplest
+    // architecture seems to be a "push" approach, i.e. a data-driven
+    // / reactive one where a function call corresponds to data being
+    // available.
+
+    // This corresponds best to the actual low-level structure when
+    // this runs on a uC: a DMA transfer_complete interrupt.
+
+    // It is opposed to a "pull" approach where a task blocks until
+    // data is available, which always needs a scheduler.  The pull
+    // approach works best on higher levels, i.e. when parsing
+    // protocols.
+
+
+So I took this out.  It's clear that the Iterator trait is the way to
+go from the API side.
+
+

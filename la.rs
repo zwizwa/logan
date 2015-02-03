@@ -42,16 +42,21 @@ mod la {
 
 #[allow(dead_code)]
 mod diff {
-    struct Diff {
-        last: usize,
+    use la::Proc;
+    struct State { last: usize, }
+    pub fn init() -> State {State{last: 0}}
+
+    impl Proc<usize,usize> for State {
+        fn tick(&mut self, input:usize) -> Option<usize> {
+            let x = input ^ self.last;
+            self.last  = input;
+            if x == 0 { None } else { Some(input) }
+        }
     }
-    pub fn tick(diff: &mut Diff, input: usize) {
-        let x = input ^ diff.last;
-        diff.last = input;
-        println!("diff: {}", x);
-    }
+
 }
 
+#[allow(dead_code)]
 mod uart {
 
     // Analyzer config and state data structures.
@@ -144,7 +149,7 @@ mod uart {
         // let period = uart.config.period;
         // let word = uart.config.nb_bits;
 
-        // let bits_bit   = |v| (0..period).map(|_| v);
+        // let bits_bit   = |v| (0..period).map(|_| v);    pub fn init() -> State {State{last: 0}}
         // let bits_frame = |v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1);
 
         // let samples  =
@@ -216,8 +221,8 @@ mod io {
     }
 }
 
-
-fn main() {
+#[allow(dead_code)]
+fn main_uart() {
     // Can't get to 20Mhz on X201
     let samplerate = 4000000us;
     let baud = 9600us;
@@ -233,4 +238,14 @@ fn main() {
     }
 }
 
+fn main_diff() {
+    let diff = diff::init();
+    for b in la::proc_map(diff, io::stdin8()) {
+        println!("{0:x}", b);
+    }
+}
 
+fn main() {
+    // main_uart();
+    main_diff();
+}

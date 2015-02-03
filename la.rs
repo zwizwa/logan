@@ -145,12 +145,13 @@ mod uart {
         //     .flat_map(bits_frame)
         //     .flat_map(bits_bit);
 
-        // for b in stream(
-        //         (0us..256)
-        //         .flat_map(|v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1))
-        //         .flat_map(|v| (0..period).map(|_| v))) {
-        //     println!("data {}", b);
-        // }
+        for b in stream(
+                (0us..256)
+                .flat_map(|v:usize| (0us..word+2).map(|bit:usize| (((v | (1 << word)) << 1) >> bit) & 1).collect())
+                .flat_map(|v:usize| (0us..period).map(|_:usize| v).collect())
+                ) {
+            println!("data {}", b);
+        }
 
         for b in stream(0us..1000) {
             println!("data {}", b);

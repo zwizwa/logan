@@ -7,7 +7,7 @@ clean:
 	rm -f *.elf *~ *.ll
 
 %.elf: %.rs
-	RUST_BACKTRACE=1 $(RUSTC) $< -o $@
+	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 $< -o $@
 
 %.ll: %.rs
 	$(RUSTC) --emit=llvm-ir $< -o $@

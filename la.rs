@@ -101,7 +101,7 @@ mod uart {
             s.skip -= 1;
         }
         else {
-            let i = input >> c.channel;
+            let i = (input >> c.channel) & 1;
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -132,9 +132,9 @@ mod uart {
         rv
     }
 
-    // FIXME: generalize over all native integer sizes
     
     #[allow(dead_code)]
+
 
     pub fn test(uart : &mut Env) {
 
@@ -217,13 +217,18 @@ mod io {
 }
 
 fn main() {
+    // Can't get to 20Mhz on X201
+    let samplerate = 4000000us;
+    let baud = 9600us;
     let config = uart::Config {
-        period:  1000,
+        period:  samplerate / baud,
         nb_bits: 8,
         channel: 3,
     };
+    println!("period = {}", config.period);
+
     let mut uart = uart::init(config);
-    uart::test(&mut uart);
+    // uart::test(&mut uart);
 
     for b in la::proc_map(uart, io::stdin8()) {
         println!("data {}", b);

@@ -160,14 +160,11 @@ pub mod uart {
         let period  = uart.config.period;
         let data_out: Vec<_> =
             proc_map(uart,
+                     // expand data to bits to samples.
                      data_in.iter()
-                     .flat_map(|v|
-                               let f = frame(nb_bits, v);
-                               (0..word+2).map(move |bit| (f >> bit) & 1))
-                     .flat_map(|w|
-                               (0..period).map(move |_| w))
+                     .flat_map(|&data| (0..nb_bits+2).map(move |shift| (frame(nb_bits, data) >> shift) & 1))
+                     .flat_map(|bit|   (0..period).map(move |_| bit))
                      ).collect();
-            
         assert_eq!(data_out, data_in);
         println!("test1 OK");
     }

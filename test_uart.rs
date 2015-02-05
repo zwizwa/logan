@@ -12,7 +12,7 @@ fn test_vec(uart: &mut la::uart::Uart, data_in: Vec<usize>) {
                   .flat_map(|&data| (0..c.nb_bits+2).map(move |shift| (frame(c.nb_bits, data) >> shift) & 1))
                   // shift it to the correct channel on the bus
                   .map(|bit| bit << c.channel)
-                  // oversample bit sequence
+                  // oversample bus sequence
                   .flat_map(|bus|   (0..c.period).map(move |_| bus))
                   ).collect();
     assert_eq!(data_out, data_in);

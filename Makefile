@@ -31,10 +31,10 @@ LDFLAGS := -L SaleaeDeviceSdk-$(SALEAE_VER)/lib/ -lSaleaeDevice64 -Xlinker -rpat
 saleae.elf: saleae.cpp $(OBJS) SaleaeDeviceSdk-$(SALEAE_VER)
 	g++ $(CFLAGS) $< -o $@ $(OBJS) $(LDFLAGS) 
 
-test1: all
-# head /dev/urandom | ./logic.elf
-	echo 'ABCDE' | ./logic.elf
 
-test2: all
-	./saleae.elf | ./logic.elf # | ./column.elf | head -n 100
+test: all
+	./test_uart.elf
+
+run_uart: all
+	./saleae.elf 8000000 | ./run_uart.elf
 

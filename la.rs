@@ -12,17 +12,17 @@ pub mod la {
         fn tick(&mut self, I) -> Option<O>;
     }
 
-    pub fn proc_map<I,S,P,O>(process: P, stream: S) -> ProcMap<I,S,P,O>
+    pub fn proc_map<I,S,P,O>(process: &mut P, stream: S) -> ProcMap<I,S,P,O>
         where S: Iterator<Item=I>, P: Proc<I,O>,
     { ProcMap { s: stream, p: process } }
 
     // Functionality is in the trait implementation.
     // The inner loop runs until tick produces something, marked (*)
-    pub struct ProcMap<I,S,P,O>
+    pub struct ProcMap<'a,I,S,P:'a,O>
         where S: Iterator<Item=I>, P: Proc<I,O>
-    { s: S, p: P, }
+    { s: S, p: &'a mut P, }
     
-    impl<I,S,P,O> Iterator for ProcMap<I,S,P,O> where
+    impl<'a,I,S,P,O> Iterator for ProcMap<'a,I,S,P,O> where
         S: Iterator<Item=I>,
         P: Proc<I,O>,
     {
@@ -83,7 +83,9 @@ pub mod la {
                 None
             }
             else {
-                Some(self.reg & 1)
+                let rv = self.reg & 1;
+                // println!("bit {}", rv);
+                Some(rv)
             }
         }
     }
@@ -213,43 +215,17 @@ pub mod uart {
     //     (0..256).flat_map(|v| frame_bits(config, v))
     // }
 
-    pub fn test(uart : &mut Env) {
-
-        // FIXME: get this nicer version to work.  Doesn't specialize
-        // properly + some lifetime issues for the closures.
-        
-        // let period = uart.config.period;
-        // let word = uart.config.nb_bits;
-
-        // let bits_bit   = |v| (0..period).map(|_| v);    pub fn init() -> State {State{last: 0}}
-        // let bits_frame = |v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1);
-
-        // let samples  =
-        //     (0..256)
-        //     .flat_map(bits_frame)
-        //     .flat_map(bits_bit);
-
-        // for b in stream(samples) {
-        //     println!("data {}", b);
-        // }
-
+    use la::proc_map;
+    pub fn test1(uart: &mut Env) {
+        let config = uart.config;
         for data in 0us..256 {
-            let bits = (data | 0x100) << 1; // add start, stop bit
-            for i in 0us..(uart.config.nb_bits+2) {
-                let bit = ((bits >> i) & 1) << uart.config.channel;
-                for _ in 0..uart.config.period {
-                    match tick(uart, bit) {
-                        None => (),
-                        Some(out_data) => 
-                            if out_data != data {
-                                panic!("out_data:{} != in_data:{}", out_data, data)
-                            }
-                    }
-                }
-            }
+            let data_out : Vec<_> = proc_map(uart, frame_bits(&config, data)).collect();
+            assert_eq!(data_out,[data]);
         }
-        println!("Test OK");
+        println!("test1 OK");
     }
+
+ 
 }
 
 pub mod io {

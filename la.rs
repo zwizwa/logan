@@ -83,7 +83,7 @@ pub mod uart {
         mode: Mode,
     }
     enum Mode {
-        Idle, Shift, Break,
+        Idle, Shift, Break, FrameErr,
     }
     pub fn init(config: Config) -> Uart {
         Uart {
@@ -102,59 +102,57 @@ pub mod uart {
         fn tick(&mut self, input :usize) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
-            let mut rv = None;
-
             // println!("uart: {} ({} {})", input, s.skip, s.bit);
 
             if s.skip > 0 {
                 s.skip -= 1;
+                return None;
             }
-            else {
-                let i = (input >> c.channel) & 1;
-                match s.mode {
-                    Idle => {
-                        if i == 0 {
-                            s.mode = Shift;
-                            s.bit = 0;
-                            // This samples halfway in between
-                            // transitions + makes sure corner cases
-                            // period 1,2 work as well.
-                            let p1 = c.period - 1;
-                            s.skip = p1 + p1 >> 1;
-                            s.reg = 0;
-                        }
-                    },
-                    Shift => {
-                        // data bit
-                        if s.bit < c.nb_bits {
-                            s.reg |= i << s.bit;
-                            s.bit += 1;
-                            s.skip = c.period - 1;
-                        }
-                        // stop bit
-                        else {
-                            if i == 0 {
-                                if s.reg != 0 {
-                                    println!("frame_error: s.reg = 0x{:x}", s.reg);
-                                }
-                                // Go to break mode even if there was a frame error.
-                                s.mode = Break;
-                            }
-                            else {
-                                rv = Some(s.reg);
-                                s.mode = Idle;
-                            }
-                            s.skip = 0;
-                        }
-                    },
-                    Break => {
+            let i = (input >> c.channel) & 1;
+            match s.mode {
+                Idle => {
+                    if i == 0 {
+                        s.mode = Shift;
+                        s.bit = 0;
+                        // Sample halfway in between transitions.
+                        // Also valid for period == 1,2.
+                        let p1 = c.period - 1;
+                        s.skip = p1 + p1 >> 1;
+                        s.reg = 0;
+                    }
+                    return None;
+                },
+                Shift => {
+                    // data bit
+                    if s.bit < c.nb_bits {
+                        s.reg |= i << s.bit;
+                        s.bit += 1;
+                        s.skip = c.period - 1;
+                        return None;
+                    }
+                    // stop bit
+                    else {
+                        s.skip = 0;
                         if i == 1 {
                             s.mode = Idle;
+                            return Some(s.reg);
+                        }
+                        else {
+                            s.mode = match s.reg {
+                                0 => Break,
+                                _ => FrameErr,
+                            };
+                            return None;
                         }
                     }
+                },
+                // FIXME: Break and FrameErr will auto-recover.
+                // Not necessarily what you want.
+                _ => {
+                    if i == 1 { s.mode = Idle; }
+                    return None;
                 }
             }
-            rv
         }
     }
 }

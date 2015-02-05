@@ -63,7 +63,9 @@ pub mod diff {
 pub mod uart {
 
     // Analyzer config and state data structures.
+    use Tick;
     use self::Mode::*;
+    
     #[derive(Copy)]
     pub struct Config {
         pub period:  usize,    // bit period
@@ -96,54 +98,51 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    use Tick;
     impl Tick<usize,usize> for Env {
-        fn tick(&mut self, i:usize) -> Option<usize> { tick(self, i) }
-    }
-    fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
-        let s = &mut uart.state;
-        let c = &uart.config;
+        fn tick(&mut self, input :usize) -> Option<usize> {
+            let s = &mut self.state;
+            let c = &self.config;
+            let mut rv = None;
 
-        let mut rv = None;
-
-        if s.skip > 0 {
-            s.skip -= 1;
-        }
-        else {
-            let i = (input >> c.channel) & 1;
-            match s.mode {
-                Idle => {
-                    if i == 0 {
-                        s.mode = Shift;
-                        s.bit = 0;
-                        /* Delay sample clock by half a bit period to
-                           give time for transition to settle.  What
-                           would be optimal? */
-                        // FIXME: doesnt work for period 1, 2
-                        s.skip = c.period + (c.period / 2) - 1;
-                        s.reg = 0;
-                    }
-                },
-                Shift => {
-                    if s.bit < c.nb_bits {
-                        s.reg |= i << s.bit;
-                        s.bit += 1;
-                        s.skip = c.period - 1;
-                    }
-                    else {
-                        s.mode = Stop;
-                    }
-                },
-                Stop => {
-                    if i == 0 { println!("frame_error: s.reg = 0x{:x}", s.reg); }
-                    else { rv = Some(s.reg); }
-
-                    s.skip = 0;
-                    s.mode = Idle;
-                },
+            if s.skip > 0 {
+                s.skip -= 1;
             }
+            else {
+                let i = (input >> c.channel) & 1;
+                match s.mode {
+                    Idle => {
+                        if i == 0 {
+                            s.mode = Shift;
+                            s.bit = 0;
+                            // Delay sample clock by half a bit period
+                            // to give time for transition to settle.
+                            // What would be optimal?
+                            // FIXME: doesnt work for period 1, 2
+                            s.skip = c.period + (c.period / 2) - 1;
+                            s.reg = 0;
+                        }
+                    },
+                    Shift => {
+                        if s.bit < c.nb_bits {
+                            s.reg |= i << s.bit;
+                            s.bit += 1;
+                            s.skip = c.period - 1;
+                        }
+                        else {
+                            s.mode = Stop;
+                        }
+                    },
+                    Stop => {
+                        if i == 0 { println!("frame_error: s.reg = 0x{:x}", s.reg); }
+                        else { rv = Some(s.reg); }
+                        
+                        s.skip = 0;
+                        s.mode = Idle;
+                    },
+                }
+            }
+            rv
         }
-        rv
     }
 }
 

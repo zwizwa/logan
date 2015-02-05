@@ -1,5 +1,5 @@
 
-all: saleae.elf la.rlib run_uart.elf run_diff.elf test_uart.elf stuff.rlib
+all: saleae.elf libla.rlib run_uart.elf run_diff.elf test_uart.elf libstuff.rlib
 
 
 RUSTC = rustc
@@ -7,10 +7,10 @@ RUSTC = rustc
 clean:
 	rm -f *.elf *~ *.ll *.rlib
 
-%.rlib: %.rs
-	$(RUSTC) --crate-name la --crate-type=lib -C opt-level=3 $<
+lib%.rlib: %.rs
+	$(RUSTC) --crate-name $* --crate-type=lib -C opt-level=3 $<
 
-%.elf: %.rs la.rlib
+%.elf: %.rs libla.rlib
 	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
 
 %.ll: %.rs
@@ -32,9 +32,9 @@ saleae.elf: saleae.cpp $(OBJS) SaleaeDeviceSdk-$(SALEAE_VER)
 	g++ $(CFLAGS) $< -o $@ $(OBJS) $(LDFLAGS) 
 
 
-test: all
+test: test_uart.elf
 	./test_uart.elf
 
-run_uart: all
+run_uart: run_uart.elf saleae.elf
 	./saleae.elf 8000000 | ./run_uart.elf
 

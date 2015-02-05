@@ -1,12 +1,12 @@
 #![feature(io)]
-#![feature(core)]
+// #![feature(core)]
 
 
 pub mod la {
     
-    /* A Logic Analyzer is a sequence processor built out of:
-       - Proc: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
-       - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence. */
+    // A Logic Analyzer is a sequence processor built out of:
+    //   - Proc: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
+    //   - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence.
 
     pub trait Proc<I,O> {
         fn tick(&mut self, I) -> Option<O>;
@@ -41,62 +41,6 @@ pub mod la {
     }
 
 
-    /// This is currently not possible
-    // fn word_bits() -> Iterator<Item=usize> {
-    //     (0..nb_bits).map(|bit| (value >> bit) & 1)
-    // }
-
-    /// I don't understand how to type closures in return types
-    /// (core::marker::Sized not implemented for Fn) and using
-    /// closures like below gives lifetime problems.
-    //
-    //     for b in 
-    //         (0..256)
-    //         .flat_map(|v| (0..word+2).map(|bit| (((v | (1 << word)) << 1) >> bit) & 1))
-    //         .flat_map(|w| (0..period).map(|_| w))
-    //     {
-    //         println!("data {}", b);
-    //     }
-    // }
-    //
-
-    /// So I'm resorting to a clumsy dual-counter low-level Iterator
-    /// struct.
-
-    #[derive(Copy)]
-    pub struct WordBits {
-        reg: usize,
-        count: usize,
-        bitcount: usize,
-        period: usize
-    }
-    impl Iterator for WordBits {
-        type Item = usize;
-        fn next(&mut self) -> Option<usize> {
-            if self.bitcount == 0 {
-                self.count -= 1;
-                self.reg >>= 1;
-                self.bitcount = self.period;
-            }
-            self.bitcount -= 1;
-            if self.count == 0 {
-                None
-            }
-            else {
-                let rv = self.reg & 1;
-                // println!("bit {}", rv);
-                Some(rv)
-            }
-        }
-    }
-    pub fn word_bits(nb_bits: usize, period: usize, value: usize) -> WordBits {
-        WordBits{
-            reg: value,
-            count: nb_bits,
-            bitcount: period,
-            period: period,
-        }
-    }
 }
 
 
@@ -121,7 +65,7 @@ pub mod diff {
 pub mod uart {
 
     // Analyzer config and state data structures.
-    use la::{Proc,WordBits,word_bits};
+    use la::{Proc};
     use self::Mode::*;
     #[derive(Copy)]
     pub struct Config {
@@ -177,6 +121,7 @@ pub mod uart {
                         /* Delay sample clock by half a bit period to
                            give time for transition to settle.  What
                            would be optimal? */
+                        // FIXME: doesnt work for period 1, 2
                         s.skip = c.period + (c.period / 2) - 1;
                         s.reg = 0;
                     }
@@ -204,26 +149,29 @@ pub mod uart {
     }
 
     
-    pub fn frame_bits(config: &Config, value: usize) -> WordBits {
-        let frame = (value | (1 << config.nb_bits)) << 1;
-        word_bits(config.nb_bits + 2, config.period, frame)
+    pub fn frame(nb_bits: usize, value: usize) -> usize {
+        (value | (1 << nb_bits)) << 1
     }
-    /// Figure out how to type this.
-    /// core::marker::Sized` is not implemented for the type `core::ops::Fn(usize) -> la::WordBits
-    // use std::iter::{FlatMap,Range};
-    // pub fn sequence_bits(config: &Config) -> FlatMap<usize,usize,Range<usize>,WordBits,Fn(usize)->WordBits> {
-    //     (0..256).flat_map(|v| frame_bits(config, v))
-    // }
 
     use la::proc_map;
-    pub fn test1(uart: &mut Env) {
-        let config = uart.config;
-        for data in 0us..256 {
-            let data_out : Vec<_> = proc_map(uart, frame_bits(&config, data)).collect();
-            assert_eq!(data_out,[data]);
-        }
+
+    pub fn test1(uart: &mut Env, data_in: Vec<usize>) {
+        let nb_bits = uart.config.nb_bits;
+        let period  = uart.config.period;
+        let data_out: Vec<_> =
+            proc_map(uart,
+                     data_in.iter()
+                     .flat_map(|v|
+                               let f = frame(nb_bits, v);
+                               (0..word+2).map(move |bit| (f >> bit) & 1))
+                     .flat_map(|w|
+                               (0..period).map(move |_| w))
+                     ).collect();
+            
+        assert_eq!(data_out, data_in);
         println!("test1 OK");
     }
+
 
  
 }

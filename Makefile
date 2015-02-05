@@ -1,5 +1,5 @@
 
-all: saleae.elf la.rlib run_uart.elf run_diff.elf test_uart.elf
+all: saleae.elf la.rlib run_uart.elf run_diff.elf test_uart.elf stuff.rlib
 
 
 RUSTC = rustc

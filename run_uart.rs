@@ -1,7 +1,7 @@
 #![feature(core)]
 extern crate la;
 fn main() {
-    let samplerate = 4000000us;
+    let samplerate = 8000000us;
     let baud = 9600us;
     
     let uart = la::uart::init(la::uart::Config {

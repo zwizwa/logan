@@ -1,3 +1,4 @@
+#![feature(core)]
 extern crate la;
 use la::apply;
 use la::uart::{Uart,Config,init};
@@ -19,18 +20,26 @@ fn test_vec(uart: &mut Uart, data_in: Vec<usize>) {
               ).collect();
     assert_eq!(data_out, data_in);
 }
+use std::iter::{count};
 
-
-fn test1() {
-    let mut uart = init(Config {
-        period:  10,
-        nb_bits: 8,
-        channel: 3,
-    });
-    test_vec(&mut uart, (0..256).collect());
+fn test_configs() {
+    for nb_bits in (7..10) {
+        for channel in (0..3) {
+            for period in (1..10) {
+                let mut uart = init(Config {
+                    period:  period,
+                    nb_bits: nb_bits,
+                    channel: channel,
+                });
+                let n = 1 << nb_bits;
+                let s = count(n-1,-1).take(n);
+                test_vec(&mut uart, s.collect());
+            }
+        }
+    }
     println!("test1 OK");
 }
 
 fn main() {
-    test1();
+    test_configs();
 }

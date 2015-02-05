@@ -83,7 +83,7 @@ pub mod uart {
         mode: Mode,
     }
     enum Mode {
-        Idle, Shift, Stop,
+        Idle, Shift, Break,
     }
     pub fn init(config: Config) -> Uart {
         Uart {
@@ -104,6 +104,8 @@ pub mod uart {
             let c = &self.config;
             let mut rv = None;
 
+            // println!("uart: {} ({} {})", input, s.skip, s.bit);
+
             if s.skip > 0 {
                 s.skip -= 1;
             }
@@ -114,31 +116,42 @@ pub mod uart {
                         if i == 0 {
                             s.mode = Shift;
                             s.bit = 0;
-                            // Delay sample clock by half a bit period
-                            // to give time for transition to settle.
-                            // What would be optimal?
-                            // FIXME: doesnt work for period 1, 2
-                            s.skip = c.period + (c.period / 2) - 1;
+                            // This samples halfway in between
+                            // transitions + makes sure corner cases
+                            // period 1,2 work as well.
+                            let p1 = c.period - 1;
+                            s.skip = p1 + p1 >> 1;
                             s.reg = 0;
                         }
                     },
                     Shift => {
+                        // data bit
                         if s.bit < c.nb_bits {
                             s.reg |= i << s.bit;
                             s.bit += 1;
                             s.skip = c.period - 1;
                         }
+                        // stop bit
                         else {
-                            s.mode = Stop;
+                            if i == 0 {
+                                if s.reg != 0 {
+                                    println!("frame_error: s.reg = 0x{:x}", s.reg);
+                                }
+                                // Go to break mode even if there was a frame error.
+                                s.mode = Break;
+                            }
+                            else {
+                                rv = Some(s.reg);
+                                s.mode = Idle;
+                            }
+                            s.skip = 0;
                         }
                     },
-                    Stop => {
-                        if i == 0 { println!("frame_error: s.reg = 0x{:x}", s.reg); }
-                        else { rv = Some(s.reg); }
-                        
-                        s.skip = 0;
-                        s.mode = Idle;
-                    },
+                    Break => {
+                        if i == 1 {
+                            s.mode = Idle;
+                        }
+                    }
                 }
             }
             rv

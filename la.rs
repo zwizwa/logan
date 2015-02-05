@@ -1,6 +1,8 @@
 #![feature(io)]
+#![feature(core)]
 
-mod la {
+
+pub mod la {
     /* A Logic Analyzer is a sequence processor built out of:
        - Proc: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
        - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence. */
@@ -15,7 +17,7 @@ mod la {
 
     // Functionality is in the trait implementation.
     // The inner loop runs until tick produces something, marked (*)
-    struct ProcMap<I,S,P,O>
+    pub struct ProcMap<I,S,P,O>
         where S: Iterator<Item=I>, P: Proc<I,O>
     { s: S, p: P, }
     
@@ -40,9 +42,10 @@ mod la {
 
 
 #[allow(dead_code)]
-mod diff {
+pub mod diff {
     use la::Proc;
-    struct State { last: usize, }
+    #[derive(Copy)]
+    pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
     impl Proc<usize,usize> for State {
@@ -56,17 +59,18 @@ mod diff {
 }
 
 #[allow(dead_code)]
-mod uart {
+pub mod uart {
 
     // Analyzer config and state data structures.
     use la::Proc;
     use self::Mode::*;
+    #[derive(Copy)]
     pub struct Config {
         pub period:  usize,    // bit period
         pub nb_bits: usize,
         pub channel: usize,
     }
-    struct Env {
+    pub struct Env {
         pub config: Config,
         state:  State,
     }
@@ -183,12 +187,12 @@ mod uart {
     }
 }
 
-mod io {
+pub mod io {
     use std::old_io;
 
     /* Manually buffered standard input.  Buffer size such that write from
     Saleae driver doesn't need to be chunked. */
-    struct Stdin8 {
+    pub struct Stdin8 {
         stream: old_io::stdio::StdinReader,
         buf: [u8; 262144],
         offset: usize, // FIXME: couldn't figure out how to use slices.
@@ -224,42 +228,4 @@ mod io {
     }
 }
 
-#[allow(dead_code)]
-fn main_uart() {
-    // Can't get to 20Mhz on X201
-    let samplerate = 4000000us;
-    let baud = 9600us;
-    
-    let uart = uart::init(uart::Config {
-        period:  samplerate / baud,
-        nb_bits: 8,
-        channel: 3,
-    });
-    // uart::test(&mut uart);
-    for b in la::proc_map(uart, io::stdin8()) {
-        print!("{}", (b as u8) as char);
-    }
-}
 
-#[allow(dead_code)]
-fn main_diff() {
-    use std::old_io;
-    let mut out = old_io::stdout();
-    
-    let diff = diff::init();
-    for b in la::proc_map(diff, io::stdin8()) {
-        match out.write_all(format!(" {0:x}", b).as_bytes()) {
-            Err(err) => panic!("{}",err),
-            Ok(_) => (),
-        }
-        match out.flush() {
-            Err(err) => panic!("{}",err),
-            Ok(_) => (),
-        }
-    }
-}
-
-fn main() {
-    main_uart();
-    // main_diff();
-}

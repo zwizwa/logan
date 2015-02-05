@@ -1,13 +1,17 @@
 
-all: la.elf saleae.elf
+all: saleae.elf la.rlib run_uart.elf run_diff.elf
+
 
 RUSTC = rustc
 
 clean:
-	rm -f *.elf *~ *.ll
+	rm -f *.elf *~ *.ll *.rlib
 
-%.elf: %.rs
-	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 $< -o $@
+%.rlib: %.rs
+	$(RUSTC) --crate-name la --crate-type=lib $<
+
+%.elf: %.rs la.rlib
+	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
 
 %.ll: %.rs
 	$(RUSTC) --emit=llvm-ir $< -o $@

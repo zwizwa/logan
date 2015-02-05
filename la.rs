@@ -2,35 +2,37 @@
 // #![feature(core)]
 
 
-    
 // A Logic Analyzer is a sequence processor built out of:
-//   - Parse: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
-//   - Apply: apply the rate-reducer over an arbitrary sequence, collect the result sequence.
+//
+//   - Tick: run a a rate-reducing state machine for one clock tick:
+//     feed in a sample, possibly produce parsed element.
+//
+//   - Apply: apply the rate-reducer to an arbitrary sequence,
+//     collect the result sequence.
 
-pub trait Parse<I,O> {
+pub trait Tick<I,O> {
     fn tick(&mut self, I) -> Option<O>;
 }
 
-pub fn apply<I,S,P,O>(process: &mut P, stream: S) -> Apply<I,S,P,O>
-    where S: Iterator<Item=I>, P: Parse<I,O>,
-{ Apply { s: stream, p: process } }
+pub struct Apply<'a,I,S,T:'a,O>
+    where S: Iterator<Item=I>, T: Tick<I,O>
+{ s: S, t: &'a mut T, }
 
-// Functionality is in the trait implementation.
+pub fn apply<I,S,T,O>(tick: &mut T, stream: S) -> Apply<I,S,T,O>
+    where S: Iterator<Item=I>, T: Tick<I,O>,
+{ Apply { s: stream, t: tick } }
+
 // The inner loop runs until tick produces something, marked (*)
-pub struct Apply<'a,I,S,P:'a,O>
-    where S: Iterator<Item=I>, P: Parse<I,O>
-{ s: S, p: &'a mut P, }
-
 impl<'a,I,S,P,O> Iterator for Apply<'a,I,S,P,O> where
     S: Iterator<Item=I>,
-P: Parse<I,O>,
+P: Tick<I,O>,
 {
     type Item = O;
     fn next(&mut self) -> Option<O> {
         loop { // (*)
             match self.s.next() {
                 None => return None,
-                Some(input) => match self.p.tick(input) {
+                Some(input) => match self.t.tick(input) {
                     None => (), // (*)
                     rv => return rv,
                 },
@@ -42,12 +44,12 @@ P: Parse<I,O>,
 
 #[allow(dead_code)]
 pub mod diff {
-    use Parse;
+    use Tick;
     #[derive(Copy)]
     pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
-    impl Parse<usize,usize> for State {
+    impl Tick<usize,usize> for State {
         fn tick(&mut self, input:usize) -> Option<usize> {
             let x = input ^ self.last;
             self.last  = input;
@@ -94,8 +96,8 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    use Parse;
-    impl Parse<usize,usize> for Env {
+    use Tick;
+    impl Tick<usize,usize> for Env {
         fn tick(&mut self, i:usize) -> Option<usize> { tick(self, i) }
     }
     fn tick (uart: &mut Env, input: usize) -> Option<usize>  {

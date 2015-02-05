@@ -72,7 +72,7 @@ pub mod uart {
         pub nb_bits: usize,
         pub channel: usize,
     }
-    pub struct Env {
+    pub struct Uart {
         pub config: Config,
         state:  State,
     }
@@ -85,8 +85,8 @@ pub mod uart {
     enum Mode {
         Idle, Shift, Stop,
     }
-    pub fn init(config: Config) -> Env {
-        Env {
+    pub fn init(config: Config) -> Uart {
+        Uart {
             config: config,
             state: State {
                 reg:  0,
@@ -98,7 +98,7 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    impl Tick<usize,usize> for Env {
+    impl Tick<usize,usize> for Uart {
         fn tick(&mut self, input :usize) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;

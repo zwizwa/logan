@@ -2,56 +2,52 @@
 // #![feature(core)]
 
 
-pub mod la {
     
-    // A Logic Analyzer is a sequence processor built out of:
-    //   - Proc: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
-    //   - ProcMap: apply the rate-reducer over an arbitrary sequence, collect the result sequence.
+// A Logic Analyzer is a sequence processor built out of:
+//   - Parse: a rate-reducing state machine: feed in a sample, possibly produce parsed element.
+//   - Apply: apply the rate-reducer over an arbitrary sequence, collect the result sequence.
 
-    pub trait Proc<I,O> {
-        fn tick(&mut self, I) -> Option<O>;
-    }
+pub trait Parse<I,O> {
+    fn tick(&mut self, I) -> Option<O>;
+}
 
-    pub fn proc_map<I,S,P,O>(process: &mut P, stream: S) -> ProcMap<I,S,P,O>
-        where S: Iterator<Item=I>, P: Proc<I,O>,
-    { ProcMap { s: stream, p: process } }
+pub fn apply<I,S,P,O>(process: &mut P, stream: S) -> Apply<I,S,P,O>
+    where S: Iterator<Item=I>, P: Parse<I,O>,
+{ Apply { s: stream, p: process } }
 
-    // Functionality is in the trait implementation.
-    // The inner loop runs until tick produces something, marked (*)
-    pub struct ProcMap<'a,I,S,P:'a,O>
-        where S: Iterator<Item=I>, P: Proc<I,O>
-    { s: S, p: &'a mut P, }
-    
-    impl<'a,I,S,P,O> Iterator for ProcMap<'a,I,S,P,O> where
-        S: Iterator<Item=I>,
-        P: Proc<I,O>,
-    {
-        type Item = O;
-        fn next(&mut self) -> Option<O> {
-            loop { // (*)
-                match self.s.next() {
-                    None => return None,
-                    Some(input) => match self.p.tick(input) {
-                        None => (), // (*)
-                        rv => return rv,
-                    },
-                }
+// Functionality is in the trait implementation.
+// The inner loop runs until tick produces something, marked (*)
+pub struct Apply<'a,I,S,P:'a,O>
+    where S: Iterator<Item=I>, P: Parse<I,O>
+{ s: S, p: &'a mut P, }
+
+impl<'a,I,S,P,O> Iterator for Apply<'a,I,S,P,O> where
+    S: Iterator<Item=I>,
+P: Parse<I,O>,
+{
+    type Item = O;
+    fn next(&mut self) -> Option<O> {
+        loop { // (*)
+            match self.s.next() {
+                None => return None,
+                Some(input) => match self.p.tick(input) {
+                    None => (), // (*)
+                    rv => return rv,
+                },
             }
         }
     }
-
-
 }
 
 
 #[allow(dead_code)]
 pub mod diff {
-    use la::Proc;
+    use Parse;
     #[derive(Copy)]
     pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
-    impl Proc<usize,usize> for State {
+    impl Parse<usize,usize> for State {
         fn tick(&mut self, input:usize) -> Option<usize> {
             let x = input ^ self.last;
             self.last  = input;
@@ -65,7 +61,6 @@ pub mod diff {
 pub mod uart {
 
     // Analyzer config and state data structures.
-    use la::{Proc};
     use self::Mode::*;
     #[derive(Copy)]
     pub struct Config {
@@ -99,7 +94,8 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    impl Proc<usize,usize> for Env {
+    use Parse;
+    impl Parse<usize,usize> for Env {
         fn tick(&mut self, i:usize) -> Option<usize> { tick(self, i) }
     }
     fn tick (uart: &mut Env, input: usize) -> Option<usize>  {
@@ -153,18 +149,17 @@ pub mod uart {
         (value | (1 << nb_bits)) << 1
     }
 
-    use la::proc_map;
-
+    use apply;
     pub fn test1(uart: &mut Env, data_in: Vec<usize>) {
         let nb_bits = uart.config.nb_bits;
         let period  = uart.config.period;
         let data_out: Vec<_> =
-            proc_map(uart,
-                     // expand data to bits to samples.
-                     data_in.iter()
-                     .flat_map(|&data| (0..nb_bits+2).map(move |shift| (frame(nb_bits, data) >> shift) & 1))
-                     .flat_map(|bit|   (0..period).map(move |_| bit))
-                     ).collect();
+            apply(uart,
+                  // expand data to bits to samples.
+                  data_in.iter()
+                  .flat_map(|&data| (0..nb_bits+2).map(move |shift| (frame(nb_bits, data) >> shift) & 1))
+                  .flat_map(|bit|   (0..period).map(move |_| bit))
+                  ).collect();
         assert_eq!(data_out, data_in);
         println!("test1 OK");
     }

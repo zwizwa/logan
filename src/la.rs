@@ -157,6 +157,136 @@ pub mod uart {
     }
 }
 
+
+pub mod syncser {
+    // transliterated from pyla/syncser.cpp
+
+    // (A) Is it necessary to provide a LSBit first shift?  Both SPI
+    //     and I2C seem to use MSBit first in all cases I've
+    //     encountered.
+    //
+    // (B) For word-oriented streams, it might be good to shift in
+    //     full words, then allow endianness config in the output
+    //     stream.
+   
+    use Tick;
+
+    #[derive(Copy)]
+    pub struct Config {
+        pub clock_channel:  usize,
+        pub data_channel:   usize,
+        pub frame_channel:  isize,   // chip select
+        pub clock_edge:     usize,
+        pub clock_polarity: usize,
+        pub frame_active:   usize,
+        pub frame_timeout:  isize,
+    }
+    struct State {
+        clock_state: usize,
+        frame_state: usize,
+        shift_count: usize,
+        shift_reg: usize,
+        frame_timeout_state: usize,
+    }
+    pub struct SyncSer {
+        pub config: Config,
+        state: State,
+    }
+    
+    pub fn config() -> Config {
+        Config {
+            clock_channel: 0,
+            data_channel:  1,
+            frame_channel: -1, // disabled
+            clock_edge: 1,     // positive edge triggering
+            clock_polarity: 0,
+            frame_active: 0,
+            frame_timeout: -1, // disabled
+        }
+    }
+    pub fn init(c: Config) -> SyncSer {
+        SyncSer {
+            config: c,
+            state: State {
+                clock_state: c.clock_polarity,
+                frame_state: c.frame_active ^ -1,
+                frame_timeout_state: 0,
+                shift_count: 0,
+                shift_reg: 0,
+            }
+        }
+    }
+    
+    impl Tick<usize,usize> for SyncSer {
+        fn tick(&mut self, input :usize) -> Option<usize> {   
+
+            let s = &mut self.state;
+            let c = &self.config;
+
+
+            let clock_bit = (input >> c.clock_channel) & 1;
+            let frame_bit = (input >> c.frame_channel) & 1;
+            let data_bit  = (input >> c.data_channel) & 1;
+
+            let mut rv = None;
+
+            // Frame edge
+            // FIXME: this should wait to do anything if it starts in the
+            // middle of a frame.
+            if c.frame_channel >= 0 { // framing enabled
+                if frame_bit != s.frame_state { // transition
+                    if frame_bit == c.frame_active {
+                        // reset shift register
+                        s.shift_reg = 0;
+                        s.shift_count = 0;
+                    }
+                }
+            }
+            // Frame timeout.
+            if c.frame_timeout > 0 {
+                if s.frame_timeout_state == 0 {
+                    // reset
+                    s.shift_reg = 0;
+                    s.shift_count = 0;
+                    s.frame_timeout_state 
+                        = c.frame_timeout as usize;
+                }
+                else {
+                    s.frame_timeout_state -= 1;
+                }
+            }
+
+            // Shift in data on sampling clock edge.
+            if (c.frame_channel < 0) ||        // ignore framing or
+                (frame_bit == c.frame_active)  // frame is active
+            { 
+                if clock_bit != s.clock_state {  // transition
+                    if clock_bit == c.clock_edge { // sampling edge
+                        s.shift_reg <<= 1; // (A) 
+                        s.shift_reg |= data_bit;
+                        s.shift_count += 1;
+                        if s.shift_count == 8 { // (B)
+                            rv = Some(s.shift_reg);
+                            // reset shift register
+                            s.shift_reg = 0;
+                            s.shift_count = 0;
+                            // reset frame timeout
+                            s.frame_timeout_state 
+                                = c.frame_timeout as usize;
+                        }
+                    }
+                }
+            }
+
+            // Edge detector state
+            s.clock_state = clock_bit;
+            s.frame_state = frame_bit;
+
+            return rv;
+        }
+    }
+}
+
 pub mod io {
     use std::old_io;
 

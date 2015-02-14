@@ -12,7 +12,11 @@ ALL :=	libla.rlib \
 all: $(ALL)
 
 
-RUSTC = rustc
+RUSTC := rustc
+RUSTC_FLAGS :=  -C opt-level=3
+
+# This is actually slower.
+# RUSTC_LDFLAGS :=  -C lto
 
 clean:
 	rm -f $(ALL) *~ *.ll
@@ -22,13 +26,13 @@ mrproper: clean
 	make -C ../examples mrproper
 
 lib%.rlib: %.rs
-	$(RUSTC) --crate-name $* --crate-type=lib -C opt-level=3 $<
+	$(RUSTC) --crate-name $* --crate-type=lib $(RUSTC_FLAGS) $<
 
 %.elf: ../examples/%.rs libla.rlib
-	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
+	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
 
 %.elf: ../tests/%.rs libla.rlib
-	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
+	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
 
 %.ll: %.rs
 	$(RUSTC) --emit=llvm-ir $< -o $@

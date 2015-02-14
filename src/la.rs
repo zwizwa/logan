@@ -24,6 +24,7 @@ pub fn decode<I,S,T,O>(tick: &mut T, stream: S) -> Decode<I,S,T,O>
     where S: Iterator<Item=I>, T: Tick<I,O>,
 { Decode { s: stream, t: tick } }
 
+#[inline(always)]
 impl<'a,I,S,P,O> Iterator for Decode<'a,I,S,P,O> where
     S: Iterator<Item=I>,
 P: Tick<I,O>,
@@ -45,9 +46,11 @@ P: Tick<I,O>,
 macro_rules! impl_Bus {
     ($t:ty) => (
         impl Bus for $t {
+            #[inline(always)]
             fn channel(&self, c:usize) -> usize {
                 ((self >> c) & 1 ) as usize
             }
+            #[inline(always)]
             fn as_usize(&self) -> usize {
                 (*self) as usize
             }
@@ -113,6 +116,7 @@ pub mod uart {
 
     // Process a single byte, output word when ready.
     impl<B> Tick<B,usize> for Uart where B: super::Bus {
+        #[inline(always)]
         fn tick(&mut self, input :B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;

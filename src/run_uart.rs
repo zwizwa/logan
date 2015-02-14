@@ -9,7 +9,7 @@ fn main() {
         channel: 3,
     });
     // uart::test(&mut uart);
-    for b in la::apply(&mut uart, la::io::stdin8()) {
+    for b in la::decode(&mut uart, la::io::stdin8()) {
         print!("{}", (b as u8) as char);
     }
 }

@@ -2,36 +2,35 @@
 
 // A Logic Analyzer is a sequence processor built out of:
 //
-//   - Tick: run a a rate-reducing state machine for one clock tick:
-//     feed in a sample, possibly produce parsed element.
+//   - Tick: run a a state machine for one clock tick, feeding it a
+//     parallel logic sample, possibly producing a parsed element.
 //
-//   - Apply: apply the rate-reducer to an arbitrary sequence,
+//   - Decode: apply the rate-reducer to a parallel logic sequence,
 //     collect the result sequence.
 
 pub trait Tick<I,O> {
     fn tick(&mut self, I) -> Option<O>;
 }
 
-pub struct Apply<'a,I,S,T:'a,O>
+pub struct Decode<'a,I,S,T:'a,O>
     where S: Iterator<Item=I>, T: Tick<I,O>
 { s: S, t: &'a mut T, }
 
-pub fn apply<I,S,T,O>(tick: &mut T, stream: S) -> Apply<I,S,T,O>
+pub fn decode<I,S,T,O>(tick: &mut T, stream: S) -> Decode<I,S,T,O>
     where S: Iterator<Item=I>, T: Tick<I,O>,
-{ Apply { s: stream, t: tick } }
+{ Decode { s: stream, t: tick } }
 
-// The inner loop runs until tick produces something, marked (*)
-impl<'a,I,S,P,O> Iterator for Apply<'a,I,S,P,O> where
+impl<'a,I,S,P,O> Iterator for Decode<'a,I,S,P,O> where
     S: Iterator<Item=I>,
 P: Tick<I,O>,
 {
     type Item = O;
     fn next(&mut self) -> Option<O> {
-        loop { // (*)
+        loop {
             match self.s.next() {
                 None => return None,
                 Some(input) => match self.t.tick(input) {
-                    None => (), // (*)
+                    None => (),
                     rv => return rv,
                 },
             }
@@ -40,7 +39,6 @@ P: Tick<I,O>,
 }
 
 
-#[allow(dead_code)]
 pub mod diff {
     use Tick;
     #[derive(Copy)]
@@ -57,7 +55,6 @@ pub mod diff {
 
 }
 
-#[allow(dead_code)]
 pub mod uart {
 
     // Analyzer config and state data structures.
@@ -178,6 +175,7 @@ pub mod syncser {
         pub clock_polarity: usize,
         pub frame_active:   usize,
         pub frame_timeout:  isize,
+        pub nb_bits:        usize,
     }
     struct State {
         clock_state: usize,
@@ -200,6 +198,7 @@ pub mod syncser {
             clock_polarity: 0,
             frame_active: 0,
             frame_timeout: -1, // disabled
+            nb_bits: 8,
         }
     }
     pub fn init(c: Config) -> SyncSer {
@@ -214,7 +213,7 @@ pub mod syncser {
             }
         }
     }
-    
+
     impl Tick<usize,usize> for SyncSer {
         fn tick(&mut self, input :usize) -> Option<usize> {   
 
@@ -263,7 +262,7 @@ pub mod syncser {
                         s.shift_reg <<= 1; // (A) 
                         s.shift_reg |= data_bit;
                         s.shift_count += 1;
-                        if s.shift_count == 8 { // (B)
+                        if s.shift_count == c.nb_bits { // (B)
                             rv = Some(s.shift_reg);
                             // reset shift register
                             s.shift_reg = 0;

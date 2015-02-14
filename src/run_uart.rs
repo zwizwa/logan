@@ -1,4 +1,3 @@
-#![feature(core)]
 extern crate la;
 fn main() {
     let samplerate = 8000000us;

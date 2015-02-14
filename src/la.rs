@@ -1,6 +1,4 @@
 #![feature(io)]
-// #![feature(core)]
-
 
 // A Logic Analyzer is a sequence processor built out of:
 //

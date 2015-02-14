@@ -1,0 +1,16 @@
+[package]
+name = "lars"
+version = "0.0.0"
+authors = [
+	"Tom Schouten <tom@zwizwa.be>",
+]
+
+description = "Logic Analyzer and Protocol Decoder library"
+homepage = "https://github.com/zwizwa/lars"
+repository = "https://github.com/zwizwa/lars"
+license = "MIT"
+
+[lib]
+name = "la"
+path = "src/la.rs"
+

@@ -13,4 +13,3 @@ license = "MIT"
 [lib]
 name = "la"
 path = "src/la.rs"
-

@@ -13,6 +13,7 @@ pub trait Tick<I,O> {
 }
 pub trait Bus {
     fn channel(&self, usize) -> usize;
+    fn as_usize(&self) -> usize;
 }
 
 pub struct Decode<'a,I,S,T:'a,O>
@@ -47,6 +48,9 @@ macro_rules! impl_Bus {
             fn channel(&self, c:usize) -> usize {
                 ((self >> c) & 1 ) as usize
             }
+            fn as_usize(&self) -> usize {
+                (*self) as usize
+            }
         });
     }
 impl_Bus!(u8);
@@ -55,18 +59,19 @@ impl_Bus!(usize);
 
 pub mod diff {
     use Tick;
+    use Bus;
     #[derive(Copy)]
     pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
-    impl Tick<usize,usize> for State {
-        fn tick(&mut self, input:usize) -> Option<usize> {
+    impl<B> Tick<B,usize> for State where B: Bus {
+        fn tick(&mut self, input_bus:B) -> Option<usize> {
+            let input = input_bus.as_usize();
             let x = input ^ self.last;
             self.last  = input;
             if x == 0 { None } else { Some(input) }
         }
     }
-
 }
 
 pub mod uart {

@@ -43,3 +43,8 @@ fn test_configs() {
 fn main() {
     test_configs();
 }
+
+#[test]
+fn run_tests() {
+    main()
+}

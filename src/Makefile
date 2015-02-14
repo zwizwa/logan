@@ -1,40 +1,43 @@
 
-all: saleae.elf libla.rlib run_uart.elf run_diff.elf test_uart.elf libstuff.rlib
+# For dev, bypasses cargo.
+
+
+ALL :=	libla.rlib \
+	../examples/saleae.elf \
+	../examples/uart.elf \
+	../examples/diff.elf \
+	../tests/test_uart.elf
+
+all: $(ALL)
 
 
 RUSTC = rustc
 
 clean:
-	rm -f *.elf *~ *.ll *.rlib
+	rm -f $(ALL) *~ *.ll
+	make -C ../examples clean
+
+mrproper: clean
+	make -C ../examples mrproper
 
 lib%.rlib: %.rs
 	$(RUSTC) --crate-name $* --crate-type=lib -C opt-level=3 $<
 
-%.elf: %.rs libla.rlib
+%.elf: ../examples/%.rs libla.rlib
+	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
+
+%.elf: ../tests/%.rs libla.rlib
 	RUST_BACKTRACE=1 $(RUSTC) -C opt-level=3 -L . $< -o $@
 
 %.ll: %.rs
 	$(RUSTC) --emit=llvm-ir $< -o $@
 
+../examples/saleae.elf:
+	make -C ../examples saleae.elf
 
-SALEAE_VER := 1.1.14
+test: ../tests/test_uart.elf
+	$<
 
-SaleaeDeviceSdk-$(SALEAE_VER).zip:
-	wget http://downloads.saleae.com/SDK/$@
-
-SaleaeDeviceSdk-$(SALEAE_VER): SaleaeDeviceSdk-$(SALEAE_VER).zip
-	unzip $<
-
-CFLAGS := -ISaleaeDeviceSdk-$(SALEAE_VER)/include -g
-LDFLAGS := -L SaleaeDeviceSdk-$(SALEAE_VER)/lib/ -lSaleaeDevice64 -Xlinker -rpath -Xlinker SaleaeDeviceSdk-$(SALEAE_VER)/lib/
-
-saleae.elf: saleae.cpp $(OBJS) SaleaeDeviceSdk-$(SALEAE_VER)
-	g++ $(CFLAGS) $< -o $@ $(OBJS) $(LDFLAGS) 
-
-
-test: test_uart.elf
-	./test_uart.elf
-
-run_uart: run_uart.elf saleae.elf
-	./saleae.elf 8000000 | ./run_uart.elf
+run_uart: ../examples/uart.elf ../examples/saleae.elf
+	cd ../examples ; ./saleae.elf 8000000 | ./uart.elf
 

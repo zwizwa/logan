@@ -11,6 +11,9 @@
 pub trait Tick<I,O> {
     fn tick(&mut self, I) -> Option<O>;
 }
+pub trait Bus {
+    fn channel(&self, usize) -> usize;
+}
 
 pub struct Decode<'a,I,S,T:'a,O>
     where S: Iterator<Item=I>, T: Tick<I,O>
@@ -38,6 +41,17 @@ P: Tick<I,O>,
     }
 }
 
+macro_rules! impl_Bus {
+    ($t:ty) => (
+        impl Bus for $t {
+            fn channel(&self, c:usize) -> usize {
+                ((self >> c) & 1 ) as usize
+            }
+        });
+    }
+impl_Bus!(u8);
+impl_Bus!(usize);
+    
 
 pub mod diff {
     use Tick;
@@ -93,8 +107,8 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    impl Tick<usize,usize> for Uart {
-        fn tick(&mut self, input :usize) -> Option<usize> {
+    impl<B> Tick<B,usize> for Uart where B: super::Bus {
+        fn tick(&mut self, input :B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
             // println!("uart: {} ({} {})", input, s.skip, s.bit);
@@ -103,7 +117,7 @@ pub mod uart {
                 s.skip -= 1;
                 return None;
             }
-            let i = (input >> c.channel) & 1;
+            let i = input.channel(c.channel);
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -170,12 +184,14 @@ pub mod syncser {
     pub struct Config {
         pub clock_channel:  usize,
         pub data_channel:   usize,
-        pub frame_channel:  isize,   // chip select
+        pub frame_channel:  usize,   // chip select
         pub clock_edge:     usize,
         pub clock_polarity: usize,
         pub frame_active:   usize,
-        pub frame_timeout:  isize,
+        pub frame_timeout:  usize,
         pub nb_bits:        usize,
+        pub frame_enable:   bool,
+        pub timeout_enable: bool,
     }
     struct State {
         clock_state: usize,
@@ -193,11 +209,13 @@ pub mod syncser {
         Config {
             clock_channel: 0,
             data_channel:  1,
-            frame_channel: -1, // disabled
+            frame_channel: 0,
+            frame_enable: false,
             clock_edge: 1,     // positive edge triggering
             clock_polarity: 0,
             frame_active: 0,
-            frame_timeout: -1, // disabled
+            frame_timeout: 0, // disabled
+            timeout_enable: false,
             nb_bits: 8,
         }
     }
@@ -214,23 +232,22 @@ pub mod syncser {
         }
     }
 
-    impl Tick<usize,usize> for SyncSer {
-        fn tick(&mut self, input :usize) -> Option<usize> {   
+    impl<B> Tick<B,usize> for SyncSer where B: super::Bus {
+        fn tick(&mut self, input :B) -> Option<usize> {   
 
             let s = &mut self.state;
             let c = &self.config;
 
-
-            let clock_bit = (input >> c.clock_channel) & 1;
-            let frame_bit = (input >> c.frame_channel) & 1;
-            let data_bit  = (input >> c.data_channel) & 1;
+            let clock_bit = input.channel(c.clock_channel);
+            let frame_bit = input.channel(c.frame_channel);
+            let data_bit  = input.channel(c.data_channel);
 
             let mut rv = None;
 
             // Frame edge
             // FIXME: this should wait to do anything if it starts in the
             // middle of a frame.
-            if c.frame_channel >= 0 { // framing enabled
+            if c.frame_enable  {
                 if frame_bit != s.frame_state { // transition
                     if frame_bit == c.frame_active {
                         // reset shift register
@@ -245,8 +262,8 @@ pub mod syncser {
                     // reset
                     s.shift_reg = 0;
                     s.shift_count = 0;
-                    s.frame_timeout_state 
-                        = c.frame_timeout as usize;
+                    s.frame_timeout_state = c.frame_timeout;
+                        
                 }
                 else {
                     s.frame_timeout_state -= 1;
@@ -254,7 +271,7 @@ pub mod syncser {
             }
 
             // Shift in data on sampling clock edge.
-            if (c.frame_channel < 0) ||        // ignore framing or
+            if c.frame_enable &&
                 (frame_bit == c.frame_active)  // frame is active
             { 
                 if clock_bit != s.clock_state {  // transition
@@ -268,8 +285,7 @@ pub mod syncser {
                             s.shift_reg = 0;
                             s.shift_count = 0;
                             // reset frame timeout
-                            s.frame_timeout_state 
-                                = c.frame_timeout as usize;
+                            s.frame_timeout_state = c.frame_timeout;
                         }
                     }
                 }
@@ -296,14 +312,14 @@ pub mod io {
         nb: usize,
     }
     impl Iterator for Stdin8 {
-        type Item = usize;
-        fn next(&mut self) -> Option<usize> {
+        type Item = u8;
+        fn next(&mut self) -> Option<u8> {
             loop {
                 let o = self.offset;
                 if o < self.nb {
                     let rv = self.buf[o];
                     self.offset += 1;
-                    return Some(rv as usize);
+                    return Some(rv);
                 }
                 match self.stream.read(&mut self.buf) {
                     Err(_) => return None,
@@ -315,10 +331,10 @@ pub mod io {
             }
         }
     }
-    pub fn stdin8<'a>() -> Stdin8 {
+    pub fn stdin8() -> Stdin8 {
         Stdin8 {
             stream: old_io::stdin(),
-            buf: [0u8; 262144],
+            buf: [0; 262144],
             offset: 0,
             nb: 0,
         }

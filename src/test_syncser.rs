@@ -32,11 +32,13 @@ fn test_configs() {
         let mut syncser = init(Config {
             data_channel: 0,
             clock_channel: 1,
-            frame_channel: -1,
+            frame_channel: 2,
+            frame_enable: false,
             clock_edge: 0,
             clock_polarity: 0,
             frame_active: 0,
-            frame_timeout: -1,
+            frame_timeout: 0,
+            timeout_enable: false,
             nb_bits: nb_bits,
         });
         let n = 1 << nb_bits;

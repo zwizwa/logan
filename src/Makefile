@@ -6,7 +6,8 @@ ALL :=	libla.rlib \
 	../examples/saleae.elf \
 	../examples/uart.elf \
 	../examples/diff.elf \
-	../tests/test_uart.elf
+	../tests/test_uart.elf \
+	../tests/test_syncser.elf \
 
 all: $(ALL)
 

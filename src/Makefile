@@ -15,7 +15,7 @@ all: $(ALL)
 RUSTC := rustc
 RUSTC_FLAGS :=  -C opt-level=3
 
-# This is actually slower.
+# Equivalent to #[inline] for everything. This is actually slower.
 # RUSTC_LDFLAGS :=  -C lto
 
 clean:

@@ -1,4 +1,5 @@
 extern crate la;
+
 fn main() {
     let samplerate = 8000000us;
     let baud = 9600us;

@@ -24,12 +24,12 @@ pub fn decode<I,S,T,O>(tick: &mut T, stream: S) -> Decode<I,S,T,O>
     where S: Iterator<Item=I>, T: Tick<I,O>,
 { Decode { s: stream, t: tick } }
 
-#[inline(always)]
 impl<'a,I,S,P,O> Iterator for Decode<'a,I,S,P,O> where
     S: Iterator<Item=I>,
 P: Tick<I,O>,
 {
     type Item = O;
+    #[inline(always)]
     fn next(&mut self) -> Option<O> {
         loop {
             match self.s.next() {
@@ -68,6 +68,7 @@ pub mod diff {
     pub fn init() -> State {State{last: 0}}
 
     impl<B> Tick<B,usize> for State where B: Bus {
+        #[inline(always)]
         fn tick(&mut self, input_bus:B) -> Option<usize> {
             let input = input_bus.as_usize();
             let x = input ^ self.last;
@@ -126,7 +127,7 @@ pub mod uart {
                 s.skip -= 1;
                 return None;
             }
-            let i = input.channel(c.channel) ^ 0x1234567800000000;
+            let i = input.channel(c.channel); // ^ 0x1234567800000000; // dasm marker
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -242,6 +243,7 @@ pub mod syncser {
     }
 
     impl<B> Tick<B,usize> for SyncSer where B: super::Bus {
+        #[inline(always)]
         fn tick(&mut self, input :B) -> Option<usize> {   
 
             let s = &mut self.state;

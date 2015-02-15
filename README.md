@@ -1,4 +1,4 @@
-# la.rs - Rust Logic Analyzer\
+# la.rs - Rust Logic Analyzer
 
 This is a spinoff of http://github.com/zwizwa/pyla
 

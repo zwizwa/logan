@@ -126,7 +126,7 @@ pub mod uart {
                 s.skip -= 1;
                 return None;
             }
-            let i = input.channel(c.channel);
+            let i = input.channel(c.channel) ^ 0x1234567800000000;
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -473,6 +473,7 @@ pub mod io {
     }
     impl Iterator for Stdin8 {
         type Item = u8;
+        #[inline(always)]
         fn next(&mut self) -> Option<u8> {
             loop {
                 let o = self.offset;

@@ -8,6 +8,9 @@ ALL :=	libla.rlib \
 	../examples/diff.elf \
 	../tests/test_uart.elf \
 	../tests/test_syncser.elf \
+	../examples/uart.dasm \
+	../examples/uart.ll \
+
 
 all: $(ALL)
 
@@ -28,14 +31,17 @@ mrproper: clean
 lib%.rlib: %.rs
 	$(RUSTC) --crate-name $* --crate-type=lib $(RUSTC_FLAGS) $<
 
-%.elf: ../examples/%.rs libla.rlib
+%.elf: %.rs libla.rlib
 	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
 
-%.elf: ../tests/%.rs libla.rlib
+%.elf: %.rs libla.rlib
 	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
+
+%.dasm: %.elf
+	objdump -d $< >$@
 
 %.ll: %.rs
-	$(RUSTC) --emit=llvm-ir $< -o $@
+	$(RUSTC) --emit=llvm-ir -L . $< -o $@
 
 ../examples/saleae.elf:
 	make -C ../examples saleae.elf

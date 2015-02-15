@@ -1,0 +1,197 @@
+Logic Analyzer in Rust
+
+Entry: la.rs
+Date: Sat Jan 31 11:40:42 EST 2015
+
+So the basic ideas:
+
+- Think of Rust as the implementation + scripting language
+- Keep integration in sigrok in mind
+
+
+This is a built off of the ideas of pyla, a Python + C++ logic
+analyzer.  It worked fine, but still was clumsy in its aproach so I
+started thinkig that Rust might be good as both a core implementation
+language for the signal processors and the dataflow glue.
+
+
+Entry: Synchronicity
+Date: Sat Jan 31 11:43:28 EST 2015
+
+Meaning: is it really necessary to process events from multiple
+sources at the same time?  This is about the only obviou reason to
+_not_ use a task/process abstraction for handling communication
+protocols.
+
+
+Entry: Threads
+Date: Sat Jan 31 23:51:03 EST 2015
+
+Solve the rest of the dataflow programming using concurrent
+programming?  It seems the most natural approach.  A good trade-off
+between speed and ease of use:
+
+- front-end: processes a lot of data but produces likely very little.
+  a synchronous state machine seems best here.
+
+- back-end: processes little data but might need more elaborate
+  code/data structure to do its job: higher abstraction seems best
+  here.
+
+The question is about task switch granularity.  For 20MHz data rate
+there is no way that this can be anything other than a tight
+single-task loop over a data array.
+
+It would be nice though to abstract the connectivity.  I.e. if I want
+to chain two processors, it will figure out how they pass data.
+
+[1] http://doc.rust-lang.org/std/thread/
+
+
+Entry: Iterators and buffers
+Date: Sun Feb  1 15:00:12 EST 2015
+
+Is it necessary to include the iterator in the "tick" method of the
+trait that abstracts analyzer state machines?  I'd think that this can
+all be optimized away.  Maybe take the plunge and look at generated code?
+
+
+Entry: Input/Output
+Date: Sun Feb  1 16:58:56 EST 2015
+
+Problem: data types when connecting processing pipelines.  Either
+avoid it by using byte streams and explicit protocols, or figure out a
+way to encode it in the type system.
+
+There seem to be too many variables here to find a good solution.
+
+Attempt to simplify and fix the abstraction levels:
+
+- parallel bit streams
+- sequential byte streams
+- packet streams
+- high level data streams
+
+
+Maybe abstract everything as Bus and provide some wrappers?
+
+Parallelism is necessary: a bus has multiple channels with
+time-correlated data.  A Bus can be a "packet bus" ?
+
+
+
+Entry: Finding the right abstraction is hard
+Date: Sun Feb  1 20:01:15 EST 2015
+
+Trying too much at once.  It's probably best to give up on premature
+optimization and figure out how to type things properly first.  A UART
+is something that takes in a synchronous bit stream and produces a
+(possibly time-tagged) byte stream.
+
+There are two problems here:
+
+- The types
+
+- The I->O control flow.
+
+
+There are three obvious way of structuring:
+
+- As a function (i->o) possibly buffered, leaving connectivity to a
+  different layer.
+
+- As a sink, abstracting composite sinks.
+
+- As a source (generator), chaining generators.
+
+In Pyla I used an i->o approach and added some composition laws to
+build sinks.
+
+DO IT WELL OR DON'T DO IT
+
+
+
+
+
+So I have a design that I already thought about for a long time.  It
+uses byte buffers to communicate, which makes it rather simple,
+structurally.
+
+If types are necessary, why not build those on top of things?
+I.e. use types as "compile time blessing" like phantom types[1].
+
+
+So let's do this: two layers:
+- Implementation, unconstrained uses byte buffers
+- Phantom layer adds typed-blessed composition
+
+
+[1] http://rustbyexample.com/generics/phantom.html
+
+
+Entry: Iterators
+Date: Sun Feb  1 22:39:36 EST 2015
+
+Tired, but I really want to get to the bottom of this.  Apparently
+passing around iterators doesn't work very well, maybe because they
+are stateful, abstract objects?
+
+So it seems better to pass something around that can create an
+iterator.  Especially because I want the ability to provide fanout.
+
+
+Entry: Push vs. pull
+Date: Mon Feb  2 13:57:25 EST 2015
+
+
+    // TL;DR: Call flow represents low level call flow.  High level
+    // abstractions build on top of this.
+
+    // From a first iteration in C++ (see zwizwa/pyla), the simplest
+    // architecture seems to be a "push" approach, i.e. a data-driven
+    // / reactive one where a function call corresponds to data being
+    // available.
+
+    // This corresponds best to the actual low-level structure when
+    // this runs on a uC: a DMA transfer_complete interrupt.
+
+    // It is opposed to a "pull" approach where a task blocks until
+    // data is available, which always needs a scheduler.  The pull
+    // approach works best on higher levels, i.e. when parsing
+    // protocols.
+
+
+So I took this out.  It's clear that the Iterator trait is the way to
+go from the API side.
+
+
+Entry: Bit generators
+Date: Fri Feb 13 22:00:25 EST 2015
+
+Makes sense to also put the stream generators in there.  At least for
+SPI it's hard enough to make a test sequence without writing it as a
+state machine.
+
+
+Entry: Only 80 - 100 MiB/sec for uart.elf
+Date: Sat Feb 14 14:26:22 EST 2015
+
+This is after adding some generic code.  Trying with previous.  Isn't
+better..
+
+EDIT: That's 20-40 cycles per sample.  Maybe not too bad?
+
+Ok, fixed.  The iterator next() wasn't inlined.  Now gets 250 - 300
+MB/sec Chased the .dasm by adding a "marker const".
+
+
+
+Entry: Visualize
+Date: Sat Feb 14 18:37:29 EST 2015
+
+First, get rid of wiggles.  Encode as black/white/grey.
+Allow very fast zoom.
+
+
+
+

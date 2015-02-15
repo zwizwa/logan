@@ -1,7 +1,6 @@
-# la.rs - A logic Analyzer in Rust.
+# la.rs - Logic Analyzer tools for Rust.
 
-A Rust library exposing logic analyzer bits.
-This is a spinoff of pyla http://github.com/zwizwa/pyla
+This is a spinoff of http://github.com/zwizwa/pyla
 
 
 # Install

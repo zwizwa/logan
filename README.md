@@ -1,4 +1,4 @@
-# la.rs - Logic Analyzer tools for Rust.
+# la.rs - Rust Logic Analyzer\
 
 This is a spinoff of http://github.com/zwizwa/pyla
 
@@ -7,7 +7,8 @@ This is a spinoff of http://github.com/zwizwa/pyla
 
 Use `cargo build` to compile just the library exposing reusable code.
 
-Included in `examples` is a C++ driver for Saleae Logic 8.
+Included in `examples` is a C++ driver for Saleae Logic 8.  See
+`examples/Makefile`
 
 To use, build a special-purpose stand-alone program with your
 configuration hardcoded.  See `examples`.

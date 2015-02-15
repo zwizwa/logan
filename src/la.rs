@@ -311,9 +311,19 @@ pub mod syncser {
 
 pub mod mipmap {
 
-    /* Logic mipmap storage.  Starting from 2^N block size, a mipmap store
-    is twice as large.  Each channel has a min and max stored (and an or). 
-    Transliterated from pyla/doodle/mipmap.cpp
+    /* mipmap storage for fast GUI zoom.
+
+    Starting from 2^N block size, a mipmap store is twice as large.
+    Each channel has a min and max stored (and an or).  Transliterated
+    from pyla/doodle/mipmap.cpp
+
+    It might be useful to only store coarse levels skipping p fine
+    levels, reducing storage to only an extra faction 1/2^p
+
+    */
+
+
+    /* Representation
 
     Each channel is two bits: [max|min]
     
@@ -322,7 +332,7 @@ pub mod mipmap {
     11 == both
     00 == neither
 
-    That encoding allows logical or to compute next mipmap.
+    That encoding allows bitwize-or to compute next mipmap.
     
     Buffer can be initialized from two complementary bit frames.
     
@@ -332,7 +342,7 @@ pub mod mipmap {
         fn plane_init(&self) -> (Self, Self);      // orig -> level 0
         fn plane_or(&self, other: &Self) -> Self;  // level n -> level n + 1
     }
-    // Is there a trait to abstract logic operations?
+    // Is there a trait to abstract logic operations instead of this workaround?
     macro_rules! impl_MipMap {
         ($t:ty) => (
             impl MipMap for $t {
@@ -399,7 +409,7 @@ pub mod mipmap {
         let o = level_offset(0, level, nb_levels);
         let n = 1 << (nb_levels - level);
         println!("{} {:x} {}", level, o, n);
-        (2*o, 2*n) // 2* for bit planes
+        (o,n)
     }
 
     /* Store increments in powers of two.  Mipmap is stored as an
@@ -413,7 +423,7 @@ pub mod mipmap {
     fn build_single<M>(store: &mut [M], level: usize) where M: MipMap {
         let nb_levels = store.len();  // needs to be power of 2.
         // o: offset, n: number of elements
-        // c: foarse, f: fine
+        // c: coarse, f: fine
         let (f_o, _)   = level_o_n(level-1, nb_levels);
         let (c_o, c_n) = level_o_n(level,   nb_levels);
         for c_i in (0..c_n) {
@@ -427,12 +437,13 @@ pub mod mipmap {
     /* first level -> compute from raw data. */
     pub fn mipmap<M>(store: &mut [M]) where M: MipMap {
         /* Build first level from store. */
-        // TODO:
+        // TODO: create 2 bit planes
 
         /* Recursively build other levels. */
         let levels = log2_upper(store.len());
         for level in (1..levels) {
             build_single(store, level);
+            // TODO: second bit plane
         }
     }
 

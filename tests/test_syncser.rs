@@ -12,25 +12,32 @@ allow unboxed closures. */
 macro_rules! test_seq {
     ($c: expr, $data_in: expr, $period: expr) => (
         $data_in.iter()
-        // expand data word into bits FIXME: add frame strobe, polarities
         .flat_map(|&data|
+                  // expand data word into bits
                   (0..$c.nb_bits).flat_map(move |shift| {
                       let bit = (data >> ($c.nb_bits - 1 - shift)) & 1;
                       // expand bit into clocked bit sequence
                       (0..2).map(move |clock|
-                                 (clock << $c.clock_channel) |
-                                 (bit   << $c.data_channel))
-                  }))
+                                 ($c.frame_active                 << $c.frame_channel) |
+                                 (($c.clock_polarity ^ clock ^ 1) << $c.clock_channel) |
+                                 (bit                             << $c.data_channel))
+                  })
+                  // follow with 1 bit frame release
+                  .chain((0..1).map(|_|
+                                    (($c.frame_active ^ 1) << $c.frame_channel) |
+                                    ($c.clock_polarity     << $c.clock_channel)
+                                    ))
+                  )
+            
         // oversample
         .flat_map(|bus|
                   (0..$period).map(move |_| bus))
         )
 }
 
-#[test]
 fn test_test_seq(c: &Config) {
     for bus in test_seq!(c, [0x55], 1) {
-        println!("{:x}", bus);
+        println!("{:01$b}", bus, 3);
     }
 }
 
@@ -52,7 +59,7 @@ fn test_configs() {
                 data_channel: 0,
                 clock_channel: 1,
                 frame_channel: 2,
-                frame_enable: false,
+                frame_enable: true,
                 clock_edge: edge,
                 clock_polarity: edge ^ 1,
                 frame_active: 0,
@@ -62,7 +69,7 @@ fn test_configs() {
             });
             let n = 1 << nb_bits;
             let s = count(n-1,-1).take(n);
-            //test_test_seq(&syncser.config);
+            test_test_seq(&syncser.config);
             test_vec(&mut syncser, s.collect(), period);
         }
     }

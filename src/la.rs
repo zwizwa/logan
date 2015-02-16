@@ -304,9 +304,7 @@ pub mod syncser {
             }
 
             // Shift in data on sampling clock edge.
-            if !c.frame_enable ||
-                (frame_bit == c.frame_active)
-            { 
+            if !c.frame_enable || (frame_bit == c.frame_active) {
                 if clock_bit != s.clock_state {  // transition
                     if clock_bit == c.clock_edge { // sampling edge
                         s.shift_reg <<= 1; // (A) 

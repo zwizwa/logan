@@ -37,7 +37,7 @@ fn test_configs() {
             }
         }
     }
-    println!("test1 OK");
+    println!("uart OK");
 }
 
 fn main() {

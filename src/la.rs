@@ -190,6 +190,26 @@ pub mod syncser {
    
     use Tick;
 
+    /* SPI clock configurations can be confusing as there are many
+    ways to express the same information.  Thus uses the following
+    convention:
+
+    - clock_edge: 
+      0  sample on 1->0 transition
+      1  sample on 0->1 transition
+
+    - clock_polarity:
+      0  clock starts out at 0 level
+      1  clock starts out at 1 level
+
+    =>
+    phase = 0  (sample on first edge)  when clock_edge != clock_polarity
+    phase = 1  (sample on second edge) when clock_edge == clock_polarity
+
+    https://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus#Mode_numbers
+    
+    */
+    
     #[derive(Copy)]
     pub struct Config {
         pub clock_channel:  usize,
@@ -222,7 +242,7 @@ pub mod syncser {
             frame_channel: 0,
             frame_enable: false,
             clock_edge: 1,     // positive edge triggering
-            clock_polarity: 0,
+            clock_polarity: 0, // idle clock
             frame_active: 0,
             frame_timeout: 0, // disabled
             timeout_enable: false,
@@ -258,7 +278,7 @@ pub mod syncser {
             // Frame edge
             // FIXME: this should wait to do anything if it starts in the
             // middle of a frame.
-            if c.frame_enable  {
+            if c.frame_enable {
                 if frame_bit != s.frame_state { // transition
                     if frame_bit == c.frame_active {
                         // reset shift register
@@ -267,23 +287,25 @@ pub mod syncser {
                     }
                 }
             }
+            
             // Frame timeout.
-            if c.frame_timeout > 0 {
-                if s.frame_timeout_state == 0 {
-                    // reset
-                    s.shift_reg = 0;
-                    s.shift_count = 0;
-                    s.frame_timeout_state = c.frame_timeout;
-                        
-                }
-                else {
-                    s.frame_timeout_state -= 1;
+            if c.timeout_enable {
+                if c.frame_timeout > 0 {
+                    if s.frame_timeout_state == 0 {
+                        // reset
+                        s.shift_reg = 0;
+                        s.shift_count = 0;
+                        s.frame_timeout_state = c.frame_timeout;
+                    }
+                    else {
+                        s.frame_timeout_state -= 1;
+                    }
                 }
             }
 
             // Shift in data on sampling clock edge.
-            if c.frame_enable &&
-                (frame_bit == c.frame_active)  // frame is active
+            if !c.frame_enable ||
+                (frame_bit == c.frame_active)
             { 
                 if clock_bit != s.clock_state {  // transition
                     if clock_bit == c.clock_edge { // sampling edge

@@ -5,6 +5,7 @@
 ALL :=	libla.rlib \
 	saleae.elf \
 	uart.elf \
+	slip.elf \
 	diff.elf \
 	uart.dasm \
 	uart.ll \

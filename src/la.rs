@@ -394,6 +394,11 @@ pub mod slip {
             return None;
         }
     }
+    pub fn print(v: Vec<u8>) {
+        print!("({}) -", v.len());
+        for e in v { print!(" {}", e); }
+        println!("");
+    }
 }
 
 pub mod mipmap {

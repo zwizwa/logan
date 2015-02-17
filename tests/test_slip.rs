@@ -11,9 +11,7 @@ fn test1() {
         esc_esc: 0x0A,
     });
     for v in decode(&mut slip, [0x0D,1,2,3,0x0D,4,5,6,0xD].iter()) {
-        print!("({}) -", v.len());
-        for e in v { print!(" {}", e); }
-        println!("");
+        la::slip::print(v);
     }
     println!("slip OK");
 }

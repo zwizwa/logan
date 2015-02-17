@@ -9,6 +9,7 @@ ALL :=	libla.rlib \
 	uart.dasm \
 	uart.ll \
 	../tests/test_uart.elf \
+	../tests/test_slip.elf \
 	../tests/test_syncser.elf \
 
 .PHONY: all clean mrproper test run_uart

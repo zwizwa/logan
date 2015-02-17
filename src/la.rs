@@ -58,6 +58,13 @@ macro_rules! impl_Bus {
     }
 impl_Bus!(u8);
 impl_Bus!(usize);
+impl_Bus!(i32);
+
+impl<'a,T> Bus for &'a T where T: Bus {
+    #[inline(always)]
+    fn channel(&self, c:usize) -> usize { (*self).channel(c) }
+    fn as_usize(&self) -> usize { (*self).as_usize() }
+}
     
 
 pub mod diff {
@@ -337,6 +344,7 @@ pub mod syncser {
 pub mod slip {
     use Tick;
     use Bus;
+    use std::mem;
     
     #[derive(Copy)]
     pub struct Config {
@@ -379,10 +387,8 @@ pub mod slip {
                 return None;
             }
             if c.end == i {
-                let rv = s.buf;
-                s.buf = Vec::new();
-                //return None;
-                return Some(rv);
+                let packet = mem::replace(&mut s.buf, Vec::new());
+                return Some(packet);
             }
             s.buf.push(i);
             return None;

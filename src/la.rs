@@ -526,6 +526,20 @@ pub mod io {
             nb: 0,
         }
     }
+    
+    #[inline]
+    pub fn write_byte(b: u8) {
+        let mut out = old_io::stdout();
+        let bs = [b];
+        match out.write_all(&bs) {
+            Err(err) => panic!("{}",err),
+            Ok(_) => (),
+        }
+        match out.flush() {
+            Err(err) => panic!("{}",err),
+            Ok(_) => (),
+        }
+    }
 }
 
 

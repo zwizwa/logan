@@ -334,6 +334,61 @@ pub mod syncser {
         }
     }
 }
+pub mod slip {
+    use Tick;
+    use Bus;
+    
+    #[derive(Copy)]
+    pub struct Config {
+        pub end:     u8,
+        pub esc:     u8,
+        pub esc_end: u8,
+        pub esc_esc: u8,
+    }
+    pub struct State {
+        buf: Vec<u8>,
+        esc: bool,
+    }
+    pub struct Slip {
+        config: Config,
+        state:  State,
+    }
+    pub fn init(c: Config) -> Slip {
+        Slip {
+            config: c,
+            state: State {
+                buf: Vec::new(),
+                esc: false,
+            }
+        }
+    }
+    impl<B> Tick<B,Vec<u8>> for Slip where B: Bus {
+        #[inline(always)]
+        fn tick(&mut self, input_bus:B) -> Option<Vec<u8>> {
+            let c = &self.config;
+            let s = &mut self.state;
+            let i = input_bus.as_usize() as u8;
+            if s.esc {
+                s.esc = false;
+                if      c.esc_end == i { s.buf.push(c.end); }
+                else if c.esc_esc == i { s.buf.push(c.esc); }
+                return None;
+            }
+            if c.esc == i {
+                s.esc = true;
+                return None;
+            }
+            if c.end == i {
+                let rv = s.buf;
+                s.buf = Vec::new();
+                //return None;
+                return Some(rv);
+            }
+            s.buf.push(i);
+            return None;
+        }
+    }
+}
 
 pub mod mipmap {
 

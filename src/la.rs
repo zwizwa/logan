@@ -48,7 +48,7 @@ macro_rules! impl_Bus {
         impl Bus for $t {
             #[inline(always)]
             fn channel(&self, c:usize) -> usize {
-                ((self >> c) & 1 ) as usize
+                (((*self) >> c) & 1 ) as usize
             }
             #[inline(always)]
             fn as_usize(&self) -> usize {
@@ -99,6 +99,7 @@ pub mod uart {
         bit: usize,  // bit count
         skip: usize, // skip count to next sample point
         mode: Mode,
+        clocks: usize,
     }
     enum Mode {
         Idle, Shift, Break, FrameErr,
@@ -111,6 +112,7 @@ pub mod uart {
                 bit:  0,
                 skip: 0,
                 mode: Idle,
+                clocks: 0,
             },
         }
     }
@@ -121,13 +123,15 @@ pub mod uart {
         fn tick(&mut self, input :B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
-            // println!("uart: {} ({} {})", input, s.skip, s.bit);
+
+            s.clocks += 1;
 
             if s.skip > 0 {
                 s.skip -= 1;
                 return None;
             }
             let i = input.channel(c.channel); // ^ 0x1234567800000000; // dasm marker
+            // println!("uart: {:x} ({} {} {})", input.as_usize(), s.skip, s.bit, s.clocks);
             match s.mode {
                 Idle => {
                     if i == 0 {

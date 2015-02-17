@@ -1,10 +1,60 @@
 
-all: saleae.elf
+# For dev, bypasses cargo.
+
+
+ALL :=	libla.rlib \
+	saleae.elf \
+	uart.elf \
+	diff.elf \
+	uart.dasm \
+	uart.ll \
+	../tests/test_uart.elf \
+	../tests/test_syncser.elf \
+
+.PHONY: all clean mrproper test run_uart
+
+all: $(ALL)
+
+
+RUSTC := rustc
+RUSTC_FLAGS :=  -C opt-level=3
+
+# Equivalent to #[inline] for everything. This is actually slower.
+# RUSTC_LDFLAGS :=  -C lto
+
 clean:
-	rm -f *.elf
+	rm -f $(ALL) *~ *.ll *.elf *.so *.rlib *.dasm
 
 mrproper: clean
 	rm -rf SaleaeDeviceSdk*
+
+
+libla.rlib: ../src/la.rs
+	$(RUSTC) --crate-name la --crate-type=lib $(RUSTC_FLAGS) $<
+
+%.elf: %.rs libla.rlib
+	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
+
+%.elf: %.rs libla.rlib
+	RUST_BACKTRACE=1 $(RUSTC) $(RUSTC_FLAGS) $(RUST_LDFLAGS) -L . $< -o $@
+
+%.dasm: %.elf
+	objdump -d $< >$@
+
+%.ll: %.rs
+	$(RUSTC) --emit=llvm-ir -L . $< -o $@
+
+
+test: ../tests/test_uart.test ../tests/test_syncser.test
+
+%.test: %.elf
+	$<
+
+run_uart: uart.elf saleae.elf
+	./saleae.elf 8000000 | ./uart.elf
+
+
+
 
 SALEAE_VER := 1.1.14
 

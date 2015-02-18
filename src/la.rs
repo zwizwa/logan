@@ -125,6 +125,15 @@ pub mod uart {
         }
     }
 
+    #[inline(always)]
+    pub fn start_delay(period: usize) -> usize {
+        // Picking initial delay after start seems tricky.  What would
+        // be a good theory?  This formula works for synthetic signals
+        // period 1 to 10 and tested IRL.  Theory?
+        let p1 = period - 1;
+        p1 + (p1 >> 1) + (period >> 2)
+    }
+
     // Process a single byte, output word when ready.
     impl<B> Tick<B,usize> for Uart where B: super::Bus {
         #[inline(always)]
@@ -145,10 +154,7 @@ pub mod uart {
                     if i == 0 {
                         s.mode = Shift;
                         s.bit = 0;
-                        // Sample halfway in between transitions.
-                        // Also valid for period == 1,2.
-                        let p1 = c.period - 1;
-                        s.skip = p1 + p1 >> 1;
+                        s.skip = start_delay(c.period);
                         s.reg = 0;
                     }
                     return None;

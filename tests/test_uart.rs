@@ -23,6 +23,10 @@ fn test_vec(uart: &mut Uart, data_in: Vec<usize>) {
 use std::iter::{count};
 
 fn test_configs() {
+    for period in (1..20) {
+        println!("{} {}", period, la::uart::start_delay(period));
+    }
+
     for nb_bits in (7..10) {
         for channel in (0..3) {
             for period in (1..10) {

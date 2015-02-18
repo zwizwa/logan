@@ -193,5 +193,16 @@ First, get rid of wiggles.  Encode as black/white/grey.
 Allow very fast zoom.
 
 
+Entry: RL UART
+Date: Tue Feb 17 22:10:21 EST 2015
+
+Sending 0xF0 bytes, it sees 0xE0 bytes and frame errors.
+
+So wire: 0 0000 1111 1
+It sees: 0 0000 0111 1
+
+Which means it samples to early.  Adding a bit more delay:
+
+
 
 

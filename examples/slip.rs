@@ -2,7 +2,7 @@ extern crate la;
 
 fn main() {
     use la::{slip,uart,decode};
-    let samplerate = 2000000us;
+    let samplerate = 1000000us;
     let baud = 115200us;
     
 

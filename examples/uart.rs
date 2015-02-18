@@ -3,6 +3,7 @@ extern crate la;
 fn main() {
     let samplerate = 2000000us;
     let baud = 115200us;
+    // let baud = 110000us;
     
     let mut uart = la::uart::init(la::uart::Config {
         period:  samplerate / baud,

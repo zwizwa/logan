@@ -1,4 +1,5 @@
 #![feature(io)]
+#![feature(core)]
 
 // A Logic Analyzer is a sequence processor built out of:
 //
@@ -168,6 +169,7 @@ pub mod uart {
                             return Some(s.reg);
                         }
                         else {
+                            println!("FrameErr/Break 0x{:x}", s.reg);
                             s.mode = match s.reg {
                                 0 => Break,
                                 _ => FrameErr,
@@ -396,7 +398,7 @@ pub mod slip {
     }
     pub fn print(v: Vec<u8>) {
         print!("({}) -", v.len());
-        for e in v { print!(" {}", e); }
+        for e in v { print!(" {:01$x}", e, 2); }
         println!("");
     }
 }

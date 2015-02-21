@@ -201,8 +201,19 @@ Sending 0xF0 bytes, it sees 0xE0 bytes and frame errors.
 So wire: 0 0000 1111 1
 It sees: 0 0000 0111 1
 
-Which means it samples to early.  Adding a bit more delay:
+Which means it samples to early.  Adding a bit more delay helps.
 
 
 
+
+Entry: UART sampling
+Date: Fri Feb 20 02:28:08 EST 2015
+
+dsPIC UART can use 16x oversampling with where majority voting is used
+for mid-bit and 1 16x clock left and right of mid-bit.
+
+I'm still puzzled why mid-bit doesn't work on the current sniff setup.
+
+This could also be rounding errors.  What about using a fractional
+bit period?
 

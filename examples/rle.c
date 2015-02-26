@@ -1,10 +1,10 @@
-#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-uint8_t buf[4*1024*1024];
+
+unsigned char buf[4*1024*1024];
 
 void error_exit(const char *msg) {
     fprintf(stderr, "assert failed: %s\n", msg);

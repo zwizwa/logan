@@ -17,8 +17,8 @@ ALL :=	libla.rlib \
 
 all: $(ALL)
 
-
-RUSTC := rustc
+RUSTC := ~/armdev/bin/rustc-arm.sh
+# RUSTC := rustc
 RUSTC_FLAGS :=  -C opt-level=3
 
 # Equivalent to #[inline] for everything. This is actually slower.

@@ -217,3 +217,20 @@ I'm still puzzled why mid-bit doesn't work on the current sniff setup.
 This could also be rounding errors.  What about using a fractional
 bit period?
 
+
+
+Entry: BeagleBone Black
+Date: Wed Feb 25 22:15:57 EST 2015
+
+slip.elf can take about 26-27 MByte/sec from /dev/zero on BBB.
+
+That's definitely usable.  It would be nice though to get that to the
+full 100MByte/sec of the BeagleLogic.
+
+A better way is probably to use RLE.  Reduce at the source.  This
+requires the processor API to change.  PRU RLE does not work at 100MHz
+
+A simpler way is to code an RLE processor in assembler to read from
+/dev/beaglebone and feed the RLE into rust code.
+
+

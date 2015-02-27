@@ -233,4 +233,50 @@ requires the processor API to change.  PRU RLE does not work at 100MHz
 A simpler way is to code an RLE processor in assembler to read from
 /dev/beaglebone and feed the RLE into rust code.
 
+So a loop in C isn't any better.  This needs assembly.
+
+
+Entry: beagle logic
+Date: Thu Feb 26 11:56:00 EST 2015
+
+Looking at the PRU source, the RLE is not done there.
+A good place would be copy_to_user() in the driver.
+Replace that with some ASM to do the encoding.
+
+
+Entry: Fast-path RLE
+Date: Fri Feb 27 02:36:32 EST 2015
+
+The idea is the following:
+
+- Fast path: if vector of 16 x 8 bit (8 x 16 bit) is the same as
+  before (= pattern), increment counter by 16 (8).
+
+- If not, use scalar ops to scan the vector, read the next vector and
+  check if it's all the same.  If so, initialize the pattern.
+
+
+
+Entry: zero-copy mmap
+Date: Fri Feb 27 00:14:31 EST 2015
+
+Trying on BeagleLogic.
+
+1. Set size
+IOCTL_BL_SET_BUFFER_SIZE
+This allocates multiples of 4MB.
+
+2. Mmap buffers, all buffers are mapped subsequently.  Driver uses
+devm_kzalloc() to allocate buffers, which is automatically freed on
+unload.
+
+3. Use poll() to synchronize.
+
+4. use lseek(fd,0,SEEK_END) to find the size that's available.
+
+5. Use NEON instructions to do the scanning.
+
+[1] http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dht0002a/ch01s03s03.html
+[2] http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.swdev.qrc/index.html
+[3] https://groups.google.com/forum/#!topic/android-ndk/0jDCsFzbmu0
 

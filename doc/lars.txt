@@ -280,3 +280,26 @@ unload.
 [2] http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.subset.swdev.qrc/index.html
 [3] https://groups.google.com/forum/#!topic/android-ndk/0jDCsFzbmu0
 
+
+
+Entry: Shaders for waveform display
+Date: Sat Feb 28 02:48:57 EST 2015
+
+It should be possible to send raw data to the shaders and have it
+render a waveform display, i.e. turning a 0/both/neither/1 input into
+lines, blocks, ...
+
+Yes, by feeding waveform data in a dynamic vertex array (1D) and
+having a static array with x-axis values 0,1,2,... on the renderer.
+
+Maybe shader can do logic shifts as well?  To pick out different bus
+values.  Seems only in higher versions (1.5?)
+
+
+
+Hmm... maybe this doesn't work.  All attributes go into one buffer,
+and it is strided?  I.e. can't update just part of it?
+
+
+EDIT: It's probably not worth the trouble, since it needs a geometry
+shader: a logic edge turns one value into two vertices.

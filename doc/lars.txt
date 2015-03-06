@@ -305,8 +305,3 @@ EDIT: It's probably not worth the trouble, since it needs a geometry
 shader: a logic edge turns one value into two vertices.
 
 
-Entry: Logic plot
-Date: Thu Mar  5 01:23:38 EST 2015
-
-So implemented FIR2 iterator but it's not necessary.  Linestrip
-already does the connecting..

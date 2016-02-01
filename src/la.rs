@@ -1,5 +1,5 @@
-#![feature(io)]
-#![feature(core)]
+//#![feature(io)]
+//#![feature(core)]
 
 // A Logic Analyzer is a sequence processor built out of:
 //
@@ -526,7 +526,7 @@ pub mod mipmap {
         // c: coarse, f: fine
         let (f_o, _)   = level_o_n(level-1, nb_levels);
         let (c_o, c_n) = level_o_n(level,   nb_levels);
-        for c_i in (0..c_n) {
+        for c_i in 0..c_n {
             let f_i = 2 * c_i;
             store[c_o + c_i] =
                 MipMap::plane_or(&store[f_o + f_i],
@@ -541,7 +541,7 @@ pub mod mipmap {
 
         /* Recursively build other levels. */
         let levels = log2_upper(store.len());
-        for level in (1..levels) {
+        for level in 1..levels {
             build_single(store, level);
             // TODO: second bit plane
         }
@@ -561,12 +561,12 @@ pub mod mipmap {
 }
 
 pub mod io {
-    use std::old_io;
+    use std::io::{self, Read};
 
     /* Manually buffered standard input.  Buffer size such that write from
     Saleae driver doesn't need to be chunked. */
     pub struct Stdin8 {
-        stream: old_io::stdio::StdinReader,
+        stream: Read,
         buf: [u8; 262144],
         offset: usize, // FIXME: couldn't figure out how to use slices.
         nb: usize,
@@ -594,7 +594,7 @@ pub mod io {
     }
     pub fn stdin8() -> Stdin8 {
         Stdin8 {
-            stream: old_io::stdin(),
+            stream: io::stdin(),
             buf: [0; 262144],
             offset: 0,
             nb: 0,
@@ -603,7 +603,7 @@ pub mod io {
     
     #[inline]
     pub fn write_byte(b: u8) {
-        let mut out = old_io::stdout();
+        let mut out = io::stdout();
         let bs = [b];
         match out.write_all(&bs) {
             Err(err) => panic!("{}",err),

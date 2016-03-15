@@ -1,0 +1,3 @@
+# stub
+all:
+	cargo build

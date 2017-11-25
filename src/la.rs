@@ -71,7 +71,7 @@ impl<'a,T> Bus for &'a T where T: Bus {
 pub mod diff {
     use Tick;
     use Bus;
-    #[derive(Copy)]
+    #[derive(Copy,Clone)]
     pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
@@ -92,7 +92,7 @@ pub mod uart {
     use Tick;
     use self::Mode::*;
     
-    #[derive(Copy)]
+    #[derive(Copy,Clone)]
     pub struct Config {
         pub period:  usize,    // bit period
         pub nb_bits: usize,
@@ -229,7 +229,7 @@ pub mod syncser {
     
     */
     
-    #[derive(Copy)]
+    #[derive(Copy,Clone)]
     pub struct Config {
         pub clock_channel:  usize,
         pub data_channel:   usize,
@@ -354,7 +354,7 @@ pub mod slip {
     use Bus;
     use std::mem;
     
-    #[derive(Copy)]
+    #[derive(Copy,Clone)]
     pub struct Config {
         pub end:     u8,
         pub esc:     u8,
@@ -565,13 +565,13 @@ pub mod io {
 
     /* Manually buffered standard input.  Buffer size such that write from
     Saleae driver doesn't need to be chunked. */
-    pub struct Stdin8 {
-        stream: Read,
+    pub struct Stdin8<'a> {
+        hstream: &'a Read,
         buf: [u8; 262144],
         offset: usize, // FIXME: couldn't figure out how to use slices.
         nb: usize,
     }
-    impl Iterator for Stdin8 {
+    impl<'a> Iterator for Stdin8<'a> {
         type Item = u8;
         #[inline(always)]
         fn next(&mut self) -> Option<u8> {
@@ -592,7 +592,7 @@ pub mod io {
             }
         }
     }
-    pub fn stdin8() -> Stdin8 {
+    pub fn stdin8<'a>() -> Stdin8<'a> {
         Stdin8 {
             stream: io::stdin(),
             buf: [0; 262144],

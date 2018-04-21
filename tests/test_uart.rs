@@ -8,22 +8,19 @@ fn frame(nb_bits: usize, value: usize) -> usize {
 fn test_vec(uart: &mut uart::Uart, data_in: Vec<usize>) {
     let c = uart.config;
 
-    // expand data word to UART frame bit sequence
-    let data_bits = 
+    let mut test_data =
         data_in.iter()
+        // expand data word to UART frame bit sequence
         .flat_map(
             |&data|
             (0..c.nb_bits+2).map(
                 move |shift|
-                (frame(c.nb_bits, data) >> shift) & 1));
-
-    // shift it to the correct channel on the bus
-    let data_channel =
-        data_bits.map(|bit| bit << c.channel);
-        
-    // oversample bus sequence
-    let mut data_oversample =
-        data_channel
+                (frame(c.nb_bits, data) >> shift) & 1))
+        // shift it to the correct channel on the bus
+        .map(
+            |bit|
+            bit << c.channel)
+        // oversample bus sequence
         .flat_map(
             |bus|
             (0..c.period).map(
@@ -32,7 +29,7 @@ fn test_vec(uart: &mut uart::Uart, data_in: Vec<usize>) {
 
     // decode it
     let data_out: Vec<_> =
-        apply(uart, &mut data_oversample).collect();
+        apply(uart, &mut test_data).collect();
 
     assert_eq!(data_out, data_in);
 }

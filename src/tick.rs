@@ -253,7 +253,7 @@ pub mod syncser {
             config: c,
             state: State {
                 clock_state: c.clock_polarity,
-                frame_state: c.frame_active ^ !1,
+                frame_state: !c.frame_active,
                 frame_timeout_state: 0,
                 shift_count: 0,
                 shift_reg: 0,

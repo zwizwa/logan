@@ -1,8 +1,8 @@
 #![feature(core)]
 #![feature(box_syntax)]
 extern crate la;
-use la::decode;
-use la::syncser::{SyncSer,Config,init};
+use la::tick::apply;
+use la::tick::syncser::{SyncSer,Config,init};
 
 /* Currently returning a sequence with closures is not possible
 without workarounds, so use a macro.  What would help is Box<Fn>

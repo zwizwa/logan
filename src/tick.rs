@@ -4,11 +4,13 @@
 
 // A Logic Analyzer is a sequence processor built out of:
 //
-//   - Tick: run a a state machine for one clock tick, feeding it a
-//     parallel logic sample, possibly producing a parsed element.
+//   - Tick: one clock tick of a logic analysis routine, operating on
+//   a bus of parallel values, possibly producing a parsed output
+//   element.
 //
-//   - Apply: apply the rate-reducer to a parallel logic sequence,
-//     collect the result sequence.
+//   - Apply: apply a logic analysis routine to an iterator over
+//   parallel bus values, producing an iterator over a result
+//   sequence.
 
 
 // ---- Tick ----
@@ -398,9 +400,11 @@ pub struct Apply<'a,I:'a,O:'a> {
     t: &'a mut Tick<I,O>,
 }
 
+// Return type can also be -> impl Iterator<Item=O> + 'a
+// Not sure how to decide specific vs. generic.
 pub fn apply<'a,I:'a,O:'a>
     (tick:   &'a mut Tick<I,O>,
-     stream: &'a mut Iterator<Item=I>) -> Apply<'a,I,O>  {
+     stream: &'a mut Iterator<Item=I>) -> Apply<'a,I,O> {
     Apply { s: stream, t: tick }
 }
 
@@ -420,4 +424,3 @@ impl<'a,I,O> Iterator for Apply<'a,I,O> where
         }
     }
 }
-

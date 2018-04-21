@@ -1,6 +1,6 @@
 extern crate la;
-use la::decode;
-use la::slip::{Config,init};
+use la::tick::apply;
+use la::tick::slip::{Config,init};
 
 
 fn test1() {

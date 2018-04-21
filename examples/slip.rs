@@ -1,10 +1,12 @@
 extern crate la;
 
+use la::tick::{slip,uart,apply};
+use la::io::{stdin8};
+
 fn main() {
-    use la::{slip,uart,decode};
-    let samplerate = 1000000us;
-    let baud = 115200us;
-    
+
+    let samplerate = 1000000usize;
+    let baud = 115200usize;
 
     let mut slip = slip::init(slip::Config {
         end: 0x0D,
@@ -19,7 +21,9 @@ fn main() {
         channel: 0,
     });
      
-    for packet in decode(&mut slip, decode(&mut uart, la::io::stdin8())) {
+    for packet in apply(&mut slip,
+                        &mut apply(&mut uart,
+                                   &mut stdin8())) {
         slip::print(packet);
     }
 }

@@ -7,11 +7,12 @@
 //   - Tick: run a a state machine for one clock tick, feeding it a
 //     parallel logic sample, possibly producing a parsed element.
 //
-//   - Decode: apply the rate-reducer to a parallel logic sequence,
+//   - Apply: apply the rate-reducer to a parallel logic sequence,
 //     collect the result sequence.
 
 
-// The part here is concerned ontly with Tick-level code.
+// ---- Tick ----
+
 pub trait Tick<I,O> {
     fn tick(&mut self, I) -> Option<O>;
 }
@@ -386,4 +387,37 @@ pub mod slip {
     }
 }
 
+
+
+
+
+// ---- Apply ----
+
+pub struct Apply<'a,I:'a,O:'a> {
+    s: &'a mut Iterator<Item=I>,
+    t: &'a mut Tick<I,O>,
+}
+
+pub fn apply<'a,I:'a,O:'a>
+    (tick:   &'a mut Tick<I,O>,
+     stream: &'a mut Iterator<Item=I>) -> Apply<'a,I,O>  {
+    Apply { s: stream, t: tick }
+}
+
+impl<'a,I,O> Iterator for Apply<'a,I,O> where
+{
+    type Item = O;
+    #[inline(always)]
+    fn next(&mut self) -> Option<O> {
+        loop {
+            match self.s.next() {
+                None => return None,
+                Some(input) => match self.t.tick(input) {
+                    None => (),
+                    rv => return rv,
+                },
+            }
+        }
+    }
+}
 

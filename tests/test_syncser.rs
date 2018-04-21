@@ -2,7 +2,7 @@
 #![feature(box_syntax)]
 extern crate la;
 use la::tick::apply;
-use la::tick::syncser::{SyncSer,Config,init};
+use la::tick::syncser;
 
 /* Currently returning a sequence with closures is not possible
 without workarounds, so use a macro.  What would help is Box<Fn>
@@ -35,40 +35,41 @@ macro_rules! test_seq {
         )
 }
 
-fn test_test_seq(c: &Config) {
+fn test_test_seq(c: &syncser::Config) {
     for bus in test_seq!(c, [0x55], 1) {
         println!("{:01$b}", bus, 3);
     }
 }
 
-fn test_vec(syncser: &mut SyncSer, data_in: Vec<usize>, period: usize) {
+fn test_vec(syncser: &mut syncser::SyncSer, data_in: Vec<usize>, period: usize) {
     let c = syncser.config;
     let data_out: Vec<_> =
-        decode(syncser,
-               test_seq!(c, data_in, period)
-               ).collect();
+        apply(syncser,
+              &mut test_seq!(c, data_in, period)
+        ).collect();
     assert_eq!(data_out, data_in);
 }
-use std::iter::{count};
 
 fn test_configs() {
     let nb_bits = 8;
-    for edge in (0..2) {
-        for period in (1..10) {
-            let mut syncser = init(Config {
-                data_channel: 0,
-                clock_channel: 1,
-                frame_channel: 2,
-                frame_enable: true,
-                clock_edge: edge,
-                clock_polarity: edge ^ 1,
-                frame_active: 0,
-                frame_timeout: 0,
-                timeout_enable: false,
-                nb_bits: nb_bits,
-            });
+    for edge in 0..2 {
+        for period in 1..10 {
+            let mut syncser = syncser::init(
+                syncser::Config {
+                    data_channel: 0,
+                    clock_channel: 1,
+                    frame_channel: 2,
+                    frame_enable: true,
+                    clock_edge: edge,
+                    clock_polarity: edge ^ 1,
+                    frame_active: 0,
+                    frame_timeout: 0,
+                    timeout_enable: false,
+                    nb_bits: nb_bits,
+                }
+            );
             let n = 1 << nb_bits;
-            let s = count(n-1,-1).take(n);
+            let s = (0..n).rev();
             test_test_seq(&syncser.config);
             test_vec(&mut syncser, s.collect(), period);
         }

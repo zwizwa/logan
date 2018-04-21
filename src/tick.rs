@@ -155,7 +155,7 @@ pub mod uart {
                             return Some(s.reg);
                         }
                         else {
-                            println!("FrameErr/Break 0x{:x}", s.reg);
+                            eprintln!("FrameErr/Break 0x{:x}", s.reg);
                             s.mode = match s.reg {
                                 0 => Break,
                                 _ => FrameErr,

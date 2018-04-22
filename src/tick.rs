@@ -395,36 +395,10 @@ pub mod slip {
 
 // ---- Apply ----
 
-pub struct Apply<'a,I:'a,O:'a> {
-    // Invoked multiple times, so better as &mut
-    t: &'a mut Tick<I,O>,
-    // As &mut.  FIXME: Could be inline because this is consumed, but
-    // can't figure out how to express the Sized trait bound.
-    // Maybe look at Iterator sources?
-    s: &'a mut Iterator<Item=I>,
-}
-
-// Return type can also be -> impl Iterator<Item=O> + 'a
-// Not sure how to decide specific vs. generic.
-pub fn apply<'a,I:'a,O:'a>
-    (tick:   &'a mut Tick<I,O>,
-     stream: &'a mut Iterator<Item=I>) -> Apply<'a,I,O> {
-        Apply { s: stream, t: tick }
-}
-
-impl<'a,I,O> Iterator for Apply<'a,I,O> where
+pub fn apply<'a,I:'a,O:'a,T,S>
+    (t: &'a mut T, s: S) -> impl Iterator<Item=O> + 'a 
+    where T:'a+Tick<I,O>,
+          S:'a+Iterator<Item=I>
 {
-    type Item = O;
-    #[inline(always)]
-    fn next(&mut self) -> Option<O> {
-        loop {
-            match self.s.next() {
-                None => return None,
-                Some(input) => match self.t.tick(input) {
-                    None => (),
-                    rv => return rv,
-                },
-            }
-        }
-    }
+    s.filter_map(move |bus| t.tick(bus))
 }

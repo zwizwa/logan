@@ -14,7 +14,7 @@ fn main() {
         channel: 0,
     });
     // uart::test(&mut uart);
-    for b in apply(&mut uart, &mut stdin8()) {
+    for b in apply(&mut uart, stdin8()) {
         //println!("{}", (b as u8) as char);
         write_byte(b as u8);
     }

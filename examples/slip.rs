@@ -22,8 +22,8 @@ fn main() {
     });
      
     for packet in apply(&mut slip,
-                        &mut apply(&mut uart,
-                                   &mut stdin8())) {
+                  apply(&mut uart,
+                        stdin8())) {
         slip::print(packet);
     }
 }

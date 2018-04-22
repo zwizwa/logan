@@ -45,7 +45,7 @@ fn test_vec(syncser: &mut syncser::SyncSer, data_in: Vec<usize>, period: usize) 
     let c = syncser.config;
     let data_out: Vec<_> =
         apply(syncser,
-              &mut test_seq!(c, data_in, period)
+              test_seq!(c, data_in, period)
         ).collect();
     assert_eq!(data_out, data_in);
 }

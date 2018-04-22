@@ -396,8 +396,12 @@ pub mod slip {
 // ---- Apply ----
 
 pub struct Apply<'a,I:'a,O:'a> {
-    s: &'a mut Iterator<Item=I>,
+    // Invoked multiple times, so better as &mut
     t: &'a mut Tick<I,O>,
+    // As &mut.  FIXME: Could be inline because this is consumed, but
+    // can't figure out how to express the Sized trait bound.
+    // Maybe look at Iterator sources?
+    s: &'a mut Iterator<Item=I>,
 }
 
 // Return type can also be -> impl Iterator<Item=O> + 'a
@@ -405,7 +409,7 @@ pub struct Apply<'a,I:'a,O:'a> {
 pub fn apply<'a,I:'a,O:'a>
     (tick:   &'a mut Tick<I,O>,
      stream: &'a mut Iterator<Item=I>) -> Apply<'a,I,O> {
-    Apply { s: stream, t: tick }
+        Apply { s: stream, t: tick }
 }
 
 impl<'a,I,O> Iterator for Apply<'a,I,O> where

@@ -1,6 +1,5 @@
 #![feature(conservative_impl_trait)]
-#![feature(unboxed_closures)]
-pub mod tick;
+pub mod sm;
 pub mod io;
 pub mod mipmap;
 

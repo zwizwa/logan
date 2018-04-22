@@ -1,6 +1,6 @@
 extern crate la;
 
-use la::tick::{slip,uart,apply};
+use la::sm::{slip,uart,apply};
 use la::io::{stdin8};
 
 fn main() {

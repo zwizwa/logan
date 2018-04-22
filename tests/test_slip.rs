@@ -1,6 +1,6 @@
 extern crate la;
-use la::tick::apply;
-use la::tick::slip;
+use la::sm::apply;
+use la::sm::slip;
 
 
 fn test1() {

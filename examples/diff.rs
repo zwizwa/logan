@@ -1,5 +1,5 @@
 #![feature(core)]
-use la::tick::{diff,apply};
+use la::sm::{diff,apply};
 use la::io::stdin8;
 extern crate la;
 fn main() {

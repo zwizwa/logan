@@ -1,23 +1,28 @@
-//#![feature(io)]
-//#![feature(core)]
 
+// sm: State Machines for logic analysis
 
-// A Logic Analyzer is a sequence processor built out of:
-//
-//   - Tick: one clock tick of a logic analysis routine, operating on
-//   a bus of parallel values, possibly producing a parsed output
-//   element.
-//
-//   - Apply: apply a logic analysis routine to an iterator over
-//   parallel bus values, producing an iterator over a result
-//   sequence.
+// ---- Apply ----
 
-
-// ---- Tick ----
-
-pub trait Tick<I,O> {
-    fn tick(&mut self, I) -> Option<O>;
+// Apply a Push state machine to an iterator.
+pub fn apply<'a,In,Out,SM,Ins>
+    (sm: &'a mut SM, ins: Ins) -> impl 'a+Iterator<Item=Out>
+    where In:  'a,
+          Out: 'a,
+          SM:  'a+Push<In,Out>,
+          Ins: 'a+Iterator<Item=In>
+{
+    ins.filter_map(move |i| sm.push(i))
 }
+
+
+// ---- Push ----
+
+// A state machine takes one (clocked) input item, and possibly
+// produces a higher level parsed result item.
+pub trait Push<I,O> {
+    fn push(&mut self, I) -> Option<O>;
+}
+// Many state machines operate on input busses.
 pub trait Bus {
     fn channel(&self, usize) -> usize;
     fn as_usize(&self) -> usize;
@@ -49,15 +54,15 @@ impl<'a,T> Bus for &'a T where T: Bus {
     
 
 pub mod diff {
-    use tick::Tick;
-    use tick::Bus;
+    use sm::Push;
+    use sm::Bus;
     #[derive(Copy,Clone)]
     pub struct State { last: usize, }
     pub fn init() -> State {State{last: 0}}
 
-    impl<B> Tick<B,usize> for State where B: Bus {
+    impl<B> Push<B,usize> for State where B: Bus {
         #[inline(always)]
-        fn tick(&mut self, input_bus:B) -> Option<usize> {
+        fn push(&mut self, input_bus:B) -> Option<usize> {
             let input = input_bus.as_usize();
             let x = input ^ self.last;
             self.last  = input;
@@ -69,7 +74,7 @@ pub mod diff {
 pub mod uart {
 
     // Analyzer config and state data structures.
-    use tick::Tick;
+    use sm::Push;
     use self::Mode::*;
     
     #[derive(Copy,Clone)]
@@ -115,9 +120,9 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    impl<B> Tick<B,usize> for Uart where B: super::Bus {
+    impl<B> Push<B,usize> for Uart where B: super::Bus {
         #[inline(always)]
-        fn tick(&mut self, input :B) -> Option<usize> {
+        fn push(&mut self, input :B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
 
@@ -187,7 +192,7 @@ pub mod syncser {
     //     full words, then allow endianness config in the output
     //     stream.
    
-    use tick::Tick;
+    use sm::Push;
 
     /* SPI clock configurations can be confusing as there are many
     ways to express the same information.  Thus uses the following
@@ -261,9 +266,9 @@ pub mod syncser {
         }
     }
 
-    impl<B> Tick<B,usize> for SyncSer where B: super::Bus {
+    impl<B> Push<B,usize> for SyncSer where B: super::Bus {
         #[inline(always)]
-        fn tick(&mut self, input :B) -> Option<usize> {   
+        fn push(&mut self, input :B) -> Option<usize> {   
 
             let s = &mut self.state;
             let c = &self.config;
@@ -330,8 +335,8 @@ pub mod syncser {
     }
 }
 pub mod slip {
-    use tick::Tick;
-    use tick::Bus;
+    use sm::Push;
+    use sm::Bus;
     use std::mem;
     
     #[derive(Copy,Clone)]
@@ -358,9 +363,9 @@ pub mod slip {
             }
         }
     }
-    impl<B> Tick<B,Vec<u8>> for Slip where B: Bus {
+    impl<B> Push<B,Vec<u8>> for Slip where B: Bus {
         #[inline(always)]
-        fn tick(&mut self, input_bus:B) -> Option<Vec<u8>> {
+        fn push(&mut self, input_bus:B) -> Option<Vec<u8>> {
             let c = &self.config;
             let s = &mut self.state;
             let i = input_bus.as_usize() as u8;
@@ -393,12 +398,3 @@ pub mod slip {
 
 
 
-// ---- Apply ----
-
-pub fn apply<'a,I:'a,O:'a,T,S>
-    (t: &'a mut T, s: S) -> impl Iterator<Item=O> + 'a 
-    where T:'a+Tick<I,O>,
-          S:'a+Iterator<Item=I>
-{
-    s.filter_map(move |bus| t.tick(bus))
-}

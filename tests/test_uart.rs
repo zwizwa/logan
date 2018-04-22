@@ -1,6 +1,6 @@
 #![feature(core)]
 extern crate la;
-use la::tick::{apply,uart};
+use la::sm::{apply,uart};
 
 fn frame(nb_bits: usize, value: usize) -> usize {
     (value | (1 << nb_bits)) << 1

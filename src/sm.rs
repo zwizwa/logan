@@ -17,8 +17,8 @@ pub fn apply<'a,In,Out,SM,Ins>
 
 // ---- Push ----
 
-// A state machine takes one (clocked) input item, and possibly
-// produces a higher level parsed result item.
+// A state machine takes the next input item, and possibly produces a
+// higher level parsed result item.
 pub trait Push<I,O> {
     fn push(&mut self, I) -> Option<O>;
 }

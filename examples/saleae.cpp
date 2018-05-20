@@ -53,6 +53,7 @@ int main( int argc, char *argv[] ) {
     }
     
     LOG("Samplerate %d\n", gSampleRateHz);
+    LOG("Waiting..\n");
 
     if (0) {
         const char *log_file = "/tmp/sl-apdu.bin";

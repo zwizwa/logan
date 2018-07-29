@@ -17,8 +17,8 @@ ALL :=	libla.rlib \
 
 all: $(ALL)
 
-RUSTC := ~/armdev/bin/rustc-arm.sh
-# RUSTC := rustc
+# RUSTC := ~/armdev/bin/rustc-arm.sh
+RUSTC := rustc
 RUSTC_FLAGS :=  -C opt-level=3
 
 # Equivalent to #[inline] for everything. This is actually slower.
@@ -31,7 +31,7 @@ mrproper: clean
 	rm -rf SaleaeDeviceSdk*
 
 
-libla.rlib: ../src/la.rs
+libla.rlib: ../src/lib.rs
 	$(RUSTC) --crate-name la --crate-type=lib $(RUSTC_FLAGS) $<
 
 %.elf: %.rs libla.rlib

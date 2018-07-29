@@ -12,4 +12,18 @@ license = "MIT"
 
 [lib]
 name = "la"
-path = "src/la.rs"
+path = "src/lib.rs"
+
+
+[[bin]]
+name = "uart"
+path = "examples/uart.rs"
+
+[[bin]]
+name = "diff"
+path = "examples/diff.rs"
+
+[[bin]]
+name = "slip"
+path = "examples/slip.rs"
+

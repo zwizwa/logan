@@ -305,3 +305,13 @@ EDIT: It's probably not worth the trouble, since it needs a geometry
 shader: a logic edge turns one value into two vertices.
 
 
+
+Entry: Parallel analyzers
+Date: Tue Jul 31 09:47:25 EDT 2018
+
+I'd like to merge this with Seq from asm_tools.  One thing I've not
+been able to express properly in the past in lars is to display
+multiple output streams.  The simplest way to do this is to use "clock
+enable" signals.
+
+

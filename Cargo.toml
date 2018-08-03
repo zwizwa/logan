@@ -27,3 +27,7 @@ path = "examples/diff.rs"
 name = "slip"
 path = "examples/slip.rs"
 
+[[bin]]
+name = "ice40"
+path = "examples/ice40.rs"
+

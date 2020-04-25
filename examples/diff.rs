@@ -1,4 +1,3 @@
-#![feature(core)]
 use la::sm::{diff,apply};
 use la::io::stdin8;
 extern crate la;

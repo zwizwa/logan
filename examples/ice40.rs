@@ -14,7 +14,6 @@
    7 CS     gpio1_12 P8_12  (white)
 */
 
-#![feature(core)]
 use la::sm::{apply,syncser};
 use la::io::stdin8;
 extern crate la;

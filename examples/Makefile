@@ -70,5 +70,5 @@ CFLAGS := -ISaleaeDeviceSdk-$(SALEAE_VER)/include -g
 LDFLAGS := -L SaleaeDeviceSdk-$(SALEAE_VER)/lib/ -lSaleaeDevice64 -Xlinker -rpath -Xlinker SaleaeDeviceSdk-$(SALEAE_VER)/lib/
 
 saleae.elf: saleae.cpp $(OBJS) SaleaeDeviceSdk-$(SALEAE_VER)
-	g++ $(CFLAGS) $< -o $@ $(OBJS) $(LDFLAGS) 
+	g++ $(CFLAGS) $< -o $@ $(OBJS) $(LDFLAGS) -lpthread
 

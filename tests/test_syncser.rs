@@ -1,5 +1,3 @@
-#![feature(core)]
-#![feature(box_syntax)]
 extern crate la;
 use la::sm::apply;
 use la::sm::syncser;

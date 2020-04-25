@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 
 #include <sys/types.h>
@@ -37,9 +38,24 @@ int thread_cmd[2];
 
 int log_fd = 1;
 
-struct apdu_state *apdu_sink;
+
+/* When we are used as an Erlang port, we need to exit when stdin
+   closes.  Saleae library is threaded, so just use another thread. */
+void *mon_stdin(void *context) {
+    for(;;) {
+        uint8_t buf[1024];
+        int rv = read(0, buf, sizeof(buf));
+        if (rv == 0) { exit(0); }
+	/* Non-blocking I/O seems to be enabled, so keep polling. */
+	sleep(1);
+    }
+}
 
 int main( int argc, char *argv[] ) {
+
+    pthread_t mon_stdin_thread;
+    pthread_create(&mon_stdin_thread, NULL, mon_stdin, NULL);
+
     DevicesManagerInterface::RegisterOnConnect( &OnConnect );
     DevicesManagerInterface::RegisterOnDisconnect( &OnDisconnect );
     DevicesManagerInterface::BeginConnect();
@@ -54,12 +70,6 @@ int main( int argc, char *argv[] ) {
     
     LOG("Samplerate %d\n", gSampleRateHz);
     LOG("Waiting..\n");
-
-    if (0) {
-        const char *log_file = "/tmp/sl-apdu.bin";
-        log_fd = open(log_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        LOG("logic trace log file = %s\n", log_file);
-    }
 
     // Use unix pipe for inter-thread communication.
     pipe(thread_cmd);

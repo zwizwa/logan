@@ -1,4 +1,3 @@
-#![feature(core)]
 extern crate la;
 use la::sm::{apply,uart};
 

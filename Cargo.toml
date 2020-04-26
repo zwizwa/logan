@@ -10,24 +10,14 @@ homepage = "https://github.com/zwizwa/lars"
 repository = "https://github.com/zwizwa/lars"
 license = "MIT"
 
+[dependencies]
+derive_more = "0.9"
+
 [lib]
 name = "la"
 path = "src/lib.rs"
 
 
 [[bin]]
-name = "uart"
-path = "apps/uart.rs"
-
-[[bin]]
-name = "diff"
-path = "apps/diff.rs"
-
-[[bin]]
-name = "slip"
-path = "apps/slip.rs"
-
-[[bin]]
-name = "ice40"
-path = "apps/ice40.rs"
-
+name = "lars"
+path = "src/lars.rs"

@@ -315,3 +315,14 @@ multiple output streams.  The simplest way to do this is to use "clock
 enable" signals.
 
 
+Entry: Tweaks
+Date: Sun Apr 26 10:57:16 EDT 2020
+
+I've added Erlang support and fixed some build issues.
+
+It does seem it is better to make a monolyth application instead of a
+bunch of small programs.  So let's do that first.
+
+
+
+

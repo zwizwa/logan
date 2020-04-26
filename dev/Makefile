@@ -1,17 +1,23 @@
 
 # For dev, bypasses cargo.
 
+# FIXME: All rust stuff is built using Cargo.
+# This currently only builds drivers.
 
-ALL :=	libla.rlib \
-	saleae.elf \
-	uart.elf \
-	slip.elf \
-	diff.elf \
-	uart.dasm \
-	uart.ll \
-	../tests/test_uart.elf \
-	../tests/test_slip.elf \
-	../tests/test_syncser.elf \
+ALL := saleae.elf
+
+# ALL :=	libla.rlib \
+# 	saleae.elf \
+# 	uart.elf \
+# 	slip.elf \
+# 	diff.elf \
+# 	uart.dasm \
+# 	uart.ll \
+# 	../tests/test_uart.elf \
+# 	../tests/test_slip.elf \
+# 	../tests/test_syncser.elf \
+
+
 
 .PHONY: all clean mrproper test run_uart
 

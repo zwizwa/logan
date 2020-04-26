@@ -52,6 +52,8 @@ void *mon_stdin(void *context) {
 }
 
 int main( int argc, char *argv[] ) {
+    const char *sr = getenv("LARS_SAMPLERATE");
+    if (sr) { gSampleRateHz = atoi(sr); }
 
     pthread_t mon_stdin_thread;
     pthread_create(&mon_stdin_thread, NULL, mon_stdin, NULL);
@@ -60,14 +62,6 @@ int main( int argc, char *argv[] ) {
     DevicesManagerInterface::RegisterOnDisconnect( &OnDisconnect );
     DevicesManagerInterface::BeginConnect();
 
-    if (argc > 2) {
-        LOG("usage: %s <samplerate>\n", argv[0]);
-        exit(1);
-    }
-    if (argc == 2) {
-        gSampleRateHz = atoi(argv[1]);
-    }
-    
     LOG("Samplerate %d\n", gSampleRateHz);
     LOG("Waiting..\n");
 

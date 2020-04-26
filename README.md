@@ -7,11 +7,11 @@ This is a spinoff of http://github.com/zwizwa/pyla
 
 Use `cargo build` to compile just the library exposing reusable code.
 
-Included in `examples` is a C++ driver for Saleae Logic 8.  See
-`examples/Makefile`
+Included in `apps` is a C++ driver for Saleae Logic 8.  See
+`apps/Makefile`
 
 To use, build a special-purpose stand-alone program with your
-configuration hardcoded.  See `examples`.
+configuration hardcoded.  See `apps`.
 
 
 # Status

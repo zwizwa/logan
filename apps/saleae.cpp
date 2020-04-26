@@ -27,7 +27,7 @@ LogicInterface* gDeviceInterface = NULL;
 #define LOG(...) fprintf(stderr, __VA_ARGS__)
 
 U64 gLogicId = 0;
-U32 gSampleRateHz = 1000000;
+U32 gSampleRateHz = 2000000;
 
 #define CMD_READ  thread_cmd[0]
 #define CMD_WRITE thread_cmd[1]

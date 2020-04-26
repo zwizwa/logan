@@ -19,3 +19,5 @@ fn main() {
         write_byte(b as u8);
     }
 }
+
+// FIXME: How to flush periodically?

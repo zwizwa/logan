@@ -17,17 +17,17 @@ path = "src/lib.rs"
 
 [[bin]]
 name = "uart"
-path = "examples/uart.rs"
+path = "apps/uart.rs"
 
 [[bin]]
 name = "diff"
-path = "examples/diff.rs"
+path = "apps/diff.rs"
 
 [[bin]]
 name = "slip"
-path = "examples/slip.rs"
+path = "apps/slip.rs"
 
 [[bin]]
 name = "ice40"
-path = "examples/ice40.rs"
+path = "apps/ice40.rs"
 

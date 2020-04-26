@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# This is used by lars.erl to start an acquisition port.  It can be
+# used stand-alone as well.
+#
+# The script needs two parameters: the raw aqcuisition driver that
+# generates binary data on stdout (e.g. saleae), and the protocol
+# filter that parses that data and produces some other protocol on
+# stdout.
+
+[ ! -z "$1" ] && DEV="$1"
+[ ! -z "$2" ] && TYPE="$2"
+
+[ -z "$DEV" ] && echo "DEV not set (saleae, ...)">&2 && exit 1
+[ -z "$TYPE" ] && echo "analyzer TYPE not set (uart, ...)">&2 && exit 1
+case "$DEV" in
+    saleae)
+        INPUT=$(dirname $0)/apps/saleae.sh
+        ;;
+    *)
+        echo "DEV=$DEV unknown">&2
+        exit 1
+        ;;
+esac
+
+FILTER="$(dirname $0)/apps/$TYPE.elf"
+[ ! -x "$FILTER" ] && echo "TYPE=$TYPE unknown">&2 && exit 1
+
+# Note that all input drivers need to exit when their stdin closes.
+$INPUT | $FILTER
+
+
+

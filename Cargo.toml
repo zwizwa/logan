@@ -1,7 +1,7 @@
 [package]
 
-// FIXME: "lars" was already taken, so in next version rename the repository?
-// This first upload is a junker to learn the ropes..
+# FIXME: "lars" was already taken, so in next version rename the repository?
+# This first upload is a junker to learn the ropes..
 
 name = "logan"
 version = "0.0.0"

@@ -1,7 +1,8 @@
 logan - Logic Analyzer in Rust
-------------------------------
+==============================
 
-# Install from crates.io
+Install from crates.io
+----------------------
 
 This crate is published on https://crates.io/crates/logan to stick to
 standard distribution channels, but beware that this is my first
@@ -9,7 +10,10 @@ create, and that the repository contains some glue code in different
 languages.
 
 
-# Install from source
+Install from source
+-------------------
+
+The git repository is at https://github.com/zwizwa/logan
 
 Use `cargo build` to compile the rust code.
 
@@ -24,7 +28,8 @@ There is also Erlang code to wrap the `logan` script in
 `erl/logan.erl`.  This depends on https://github.com/zwizwa/erl_tools
 
 
-# Status
+Status
+------
 
 State is proof-of-concept.  There is not yet any documentation but it
 is quite straightforward to use and extend if you read Rust.

@@ -1,4 +1,4 @@
--module(lars).
+-module(logan).
 -export([start_link/1, handle/2]).
 
 
@@ -11,7 +11,7 @@ start_link(Config) ->
                  serv:start(
                    {handler,
                     fun() ->
-                            log:set_info_name({lars,Dev,Type}),
+                            log:set_info_name({logan,Dev,Type}),
                             self() ! start,
                             Config end,
                     fun ?MODULE:handle/2})}
@@ -34,7 +34,7 @@ handle(start, State = #{ spawn_port := SpawnPort, dev := Dev, type := Type }) ->
     Port =
         SpawnPort(
           #{ opts => [{line,1024}, binary, use_stdio, exit_status],
-             cmd  => "lars",
+             cmd  => "logan",
              args => [tools:format("~s",[Dev]),
                       tools:format("~s",[Type])]
            }),

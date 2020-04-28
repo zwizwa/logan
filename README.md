@@ -1,24 +1,39 @@
-# la.rs - Rust Logic Analyzer
+logan - Logic Analyzer in Rust
+------------------------------
 
-This is a spinoff of http://github.com/zwizwa/pyla
+# Install from crates.io
+
+This crate is published on https://crates.io/crates/logan to stick to
+standard distribution channels, but beware that this is my first
+create, and that the repository contains some glue code in different
+languages.
 
 
-# Install
+# Install from source
 
-Use `cargo build` to compile just the library exposing reusable code.
+Use `cargo build` to compile the rust code.
 
-Included in `apps` is a C++ driver for Saleae Logic 8.  See
-`apps/Makefile`
+Included in the `dev` directory is a C++ wrapper for the Saleae Logic
+8 library.  Use `make -C dev` to download upstream library and build
+the wrapper.
 
-To use, build a special-purpose stand-alone program with your
-configuration hardcoded.  See `apps`.
+The `logan` script can be used to start a live analysis session on the
+command line.
+
+There is also Erlang code to wrap the `logan` script in
+`erl/logan.erl`.  This depends on https://github.com/zwizwa/erl_tools
 
 
 # Status
 
-Proof-of-concept.  Currently (20150215) only the UART works.  I am
-building this to learn how to write performance-critical code in Rust
-through a useful, real world example.
+State is proof-of-concept.  There is not yet any documentation but it
+is quite straightforward to use and extend if you read Rust.
+
+This started out as a project to try out Rust in a performance
+critical setting.  It is a little rough on the edges but I do use it
+in my debugging work.  APIs will probably change slightly to make them
+more flexible.
 
 This code relies on heavy inlining to get to reasonably good
-performance (250-300 M samples/sec on a X201).  
+performance (250-300 M samples/sec on a X201).
+

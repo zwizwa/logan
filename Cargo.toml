@@ -1,8 +1,5 @@
 [package]
 
-# FIXME: "lars" was already taken, so in next version rename the repository?
-# This first upload is a junker to learn the ropes..
-
 name = "logan"
 version = "0.0.0"
 authors = [
@@ -10,20 +7,20 @@ authors = [
 ]
 
 description = "Logic Analyzer and Protocol Decoder library"
-homepage = "https://github.com/zwizwa/lars"
-repository = "https://github.com/zwizwa/lars"
+homepage = "https://github.com/zwizwa/logan"
+repository = "https://github.com/zwizwa/logan"
 license = "MIT"
 readme = "README.md"
-documentation = "https://github.com/zwizwa/lars"
+documentation = "https://github.com/zwizwa/logan"
 
 [dependencies]
 derive_more = "0.9"
 
 [lib]
-name = "la"
+name = "logan"
 path = "src/lib.rs"
 
 
 [[bin]]
-name = "lars"
-path = "src/lars.rs"
+name = "logan"
+path = "src/logan.rs"

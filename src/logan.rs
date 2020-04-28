@@ -5,11 +5,11 @@
    currently not very configurable.
 */
 
-extern crate la;
+extern crate logan;
 extern crate derive_more;
 
-use la::sm::{uart,slip,syncser,diff,apply};
-use la::io::{stdin8,write_byte};
+use logan::sm::{uart,slip,syncser,diff,apply};
+use logan::io::{stdin8,write_byte};
 use derive_more::From;
 
 fn start_uart() -> Result<(), AppError>  {
@@ -84,7 +84,7 @@ fn start_ice40() -> Result<(), AppError>  {
     let mut syncser = syncser::init(config);
     for b in apply(&mut syncser, stdin8()) {
         println!("{:01$x}",b,2);
-        // la::io::write_byte(b);
+        // logan::io::write_byte(b);
     }
     Ok(())
 }
@@ -93,7 +93,7 @@ fn start_diff() -> Result<(), AppError>  {
     let mut diff = diff::init();
     for b in apply(&mut diff, stdin8()) {
         println!("{:01$x}",b,2);
-        // la::io::write_byte(b);
+        // logan::io::write_byte(b);
     }
     Ok(())
 }
@@ -127,10 +127,10 @@ enum AppError {
 /* Some shared code. */
 
 
-fn samplerate() -> Result<usize, AppError> { var("LARS_SAMPLERATE", 2000000) }
-fn baudrate()   -> Result<usize, AppError> { var("LARS_BAUDRATE",    115200) }
+fn samplerate() -> Result<usize, AppError> { var("LOGAN_SAMPLERATE", 2000000) }
+fn baudrate()   -> Result<usize, AppError> { var("LOGAN_BAUDRATE",    115200) }
 fn var(varname: &str, default: usize) -> Result<usize, AppError> {
-    // let sr_str = std::env::var("LARS_SAMPLERATE")?;
+    // let sr_str = std::env::var("LOGAN_SAMPLERATE")?;
     match std::env::var(varname) {
         Ok(sr_str) => {
             let sr = sr_str.parse::<usize>()?;

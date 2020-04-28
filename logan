@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# This is used by lars.erl to start an acquisition port.  It can be
+# This is used by logan.erl to start an acquisition port.  It can be
 # used stand-alone as well.
 #
 # The script needs two parameters: the raw aqcuisition driver that
@@ -24,7 +24,7 @@ case "$DEV" in
         ;;
 esac
 
-FILTER="$(dirname $0)/target/release/lars"
+FILTER="$(dirname $0)/target/release/logan"
 [ ! -x "$FILTER" ] && echo "Need $FILTER">&2 && exit 1
 
 # Note that all input drivers need to exit when their stdin closes.

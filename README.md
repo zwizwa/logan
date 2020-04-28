@@ -30,9 +30,8 @@ State is proof-of-concept.  There is not yet any documentation but it
 is quite straightforward to use and extend if you read Rust.
 
 This started out as a project to try out Rust in a performance
-critical setting.  It is a little rough on the edges but I do use it
-in my debugging work.  APIs will probably change slightly to make them
-more flexible.
+critical setting.  It is a little rough around the edges.  APIs will
+probably change slightly to make them more flexible.
 
 This code relies on heavy inlining to get to reasonably good
 performance (250-300 M samples/sec on a X201).

@@ -13,12 +13,8 @@ use la::io::{stdin8,write_byte};
 use derive_more::From;
 
 fn start_uart() -> Result<(), AppError>  {
-    let samplerate = 2000000usize;
-    let baud = 115200usize;
-    // let baud = 110000u32;
-    
     let mut uart = uart::init(uart::Config {
-        period:  samplerate / baud,
+        period:  samplerate()? / baudrate()?,
         nb_bits: 8,
         channel: 0,
     });
@@ -129,8 +125,18 @@ enum AppError {
 }
 
 /* Some shared code. */
-fn samplerate() -> Result<usize, AppError> {
-    let sr_str = std::env::var("LARS_SAMPLERATE")?;
-    let sr = sr_str.parse::<usize>()?;
-    Ok(sr)
+
+
+fn samplerate() -> Result<usize, AppError> { var("LARS_SAMPLERATE", 2000000) }
+fn baudrate()   -> Result<usize, AppError> { var("LARS_BAUDRATE",    115200) }
+fn var(varname: &str, default: usize) -> Result<usize, AppError> {
+    // let sr_str = std::env::var("LARS_SAMPLERATE")?;
+    match std::env::var(varname) {
+        Ok(sr_str) => {
+            let sr = sr_str.parse::<usize>()?;
+            Ok(sr)
+        },
+        Err(_) =>
+            Ok(default)
+    }
 }

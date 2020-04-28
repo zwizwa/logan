@@ -9,6 +9,8 @@ description = "Logic Analyzer and Protocol Decoder library"
 homepage = "https://github.com/zwizwa/lars"
 repository = "https://github.com/zwizwa/lars"
 license = "MIT"
+readme = "README.md"
+documentation = "https://github.com/zwizwa/lars"
 
 [dependencies]
 derive_more = "0.9"

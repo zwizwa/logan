@@ -2,7 +2,7 @@
 .PHONY: all test clean
 all:
 	cargo build --release
-	if [ ! -z "$$ELF" ]; then ln -f target/release/lars "$$ELF"; fi
+	if [ ! -z "$$ELF" ]; then ln -f target/release/logan "$$ELF"; fi
 
 test:
 	cargo test --verbose

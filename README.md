@@ -15,6 +15,10 @@ Install from source
 
 The git repository is at https://github.com/zwizwa/logan
 
+If Rust is not installed, the tool `rustup` can be used.  E.g. on
+Ubuntu this can be done using `sudo snap install rustup --classic`,
+followed by `rustup install stable`.
+
 Use `cargo build` to compile the rust code.
 
 Included in the `dev` directory is a C++ wrapper for the Saleae Logic

@@ -1,72 +1,87 @@
-
 // sm: State Machines for logic analysis
 
 // ---- Apply ----
 
 // Apply a Push state machine to an iterator.
-pub fn apply<'a,In,Out,SM,Ins>
-    (sm: &'a mut SM, ins: Ins) -> impl 'a+Iterator<Item=Out>
-    where In:  'a,
-          Out: 'a,
-          SM:  'a+Push<In,Out>,
-          Ins: 'a+Iterator<Item=In>
+pub fn apply<'a, In, Out, SM, Ins>(sm: &'a mut SM, ins: Ins) -> impl 'a + Iterator<Item = Out>
+where
+    In: 'a,
+    Out: 'a,
+    SM: 'a + Push<In, Out>,
+    Ins: 'a + Iterator<Item = In>,
 {
     ins.filter_map(move |i| sm.push(i))
 }
-
 
 // ---- Push ----
 
 // A state machine takes the next input item, and possibly produces a
 // higher level parsed result item.
-pub trait Push<I,O> {
-    fn push(&mut self, I) -> Option<O>;
+pub trait Push<I, O> {
+    fn push(&mut self, input: I) -> Option<O>;
 }
 // Many state machines operate on input busses.
 pub trait Bus {
-    fn channel(&self, usize) -> usize;
+    fn channel(&self, channel_nb: usize) -> usize;
     fn as_usize(&self) -> usize;
 }
 
-
 macro_rules! impl_Bus {
-    ($t:ty) => (
+    ($t:ty) => {
         impl Bus for $t {
             #[inline(always)]
-            fn channel(&self, c:usize) -> usize {
-                (((*self) >> c) & 1 ) as usize
+            fn channel(&self, c: usize) -> usize {
+                (((*self) >> c) & 1) as usize
             }
             #[inline(always)]
             fn as_usize(&self) -> usize {
                 (*self) as usize
             }
-        });
-    }
+        }
+    };
+}
 impl_Bus!(u8);
 impl_Bus!(usize);
 impl_Bus!(i32);
 
-impl<'a,T> Bus for &'a T where T: Bus {
+impl<'a, T> Bus for &'a T
+where
+    T: Bus,
+{
     #[inline(always)]
-    fn channel(&self, c:usize) -> usize { (*self).channel(c) }
-    fn as_usize(&self) -> usize { (*self).as_usize() }
+    fn channel(&self, c: usize) -> usize {
+        (*self).channel(c)
+    }
+    fn as_usize(&self) -> usize {
+        (*self).as_usize()
+    }
 }
-    
 
 pub mod diff {
-    use sm::Push;
     use sm::Bus;
-    #[derive(Copy,Clone)]
-    pub struct State { last: usize, }
-    pub fn init() -> State {State{last: 0}}
+    use sm::Push;
+    #[derive(Copy, Clone)]
+    pub struct State {
+        last: usize,
+    }
+    pub fn init() -> State {
+        State { last: 0 }
+    }
 
-    impl<B> Push<B,usize> for State where B: Bus {
+    impl<B> Push<B, usize> for State
+    where
+        B: Bus,
+    {
         #[inline(always)]
-        fn push(&mut self, input_bus:B) -> Option<usize> {
+        fn push(&mut self, input_bus: B) -> Option<usize> {
             let input = input_bus.as_usize();
             let x = input ^ self.last;
-            self.last  = input;
-            if x == 0 { None } else { Some(input) }
+            self.last = input;
+            if x == 0 {
+                None
+            } else {
+                Some(input)
+            }
         }
     }
 }
@@ -74,18 +89,18 @@ pub mod diff {
 pub mod uart {
 
     // Analyzer config and state data structures.
-    use sm::Push;
     use self::Mode::*;
-    
-    #[derive(Copy,Clone)]
+    use sm::Push;
+
+    #[derive(Copy, Clone)]
     pub struct Config {
-        pub period:  usize,    // bit period
+        pub period: usize, // bit period
         pub nb_bits: usize,
         pub channel: usize,
     }
     pub struct Uart {
         pub config: Config,
-        state:  State,
+        state: State,
     }
     struct State {
         reg: usize,  // data shift register
@@ -95,14 +110,17 @@ pub mod uart {
         clocks: usize,
     }
     enum Mode {
-        Idle, Shift, Break, FrameErr,
+        Idle,
+        Shift,
+        Break,
+        FrameErr,
     }
     pub fn init(config: Config) -> Uart {
         Uart {
             config: config,
             state: State {
-                reg:  0,
-                bit:  0,
+                reg: 0,
+                bit: 0,
                 skip: 0,
                 mode: Idle,
                 clocks: 0,
@@ -120,9 +138,12 @@ pub mod uart {
     }
 
     // Process a single byte, output word when ready.
-    impl<B> Push<B,usize> for Uart where B: super::Bus {
+    impl<B> Push<B, usize> for Uart
+    where
+        B: super::Bus,
+    {
         #[inline(always)]
-        fn push(&mut self, input :B) -> Option<usize> {
+        fn push(&mut self, input: B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
 
@@ -133,7 +154,7 @@ pub mod uart {
                 return None;
             }
             let i = input.channel(c.channel); // ^ 0x1234567800000000; // dasm marker
-            // println!("uart: {:x} ({} {} {})", input.as_usize(), s.skip, s.bit, s.clocks);
+                                              // println!("uart: {:x} ({} {} {})", input.as_usize(), s.skip, s.bit, s.clocks);
             match s.mode {
                 Idle => {
                     if i == 0 {
@@ -143,7 +164,7 @@ pub mod uart {
                         s.reg = 0;
                     }
                     return None;
-                },
+                }
                 Shift => {
                     // data bit
                     if s.bit < c.nb_bits {
@@ -158,8 +179,7 @@ pub mod uart {
                         if i == 1 {
                             s.mode = Idle;
                             return Some(s.reg);
-                        }
-                        else {
+                        } else {
                             eprintln!("FrameErr/Break 0x{:x}", s.reg);
                             s.mode = match s.reg {
                                 0 => Break,
@@ -168,18 +188,19 @@ pub mod uart {
                             return None;
                         }
                     }
-                },
+                }
                 // FIXME: Break and FrameErr will auto-recover.
                 // Not necessarily what you want.
                 _ => {
-                    if i == 1 { s.mode = Idle; }
+                    if i == 1 {
+                        s.mode = Idle;
+                    }
                     return None;
                 }
             }
         }
     }
 }
-
 
 pub mod syncser {
     // transliterated from pyla/syncser.cpp
@@ -191,14 +212,14 @@ pub mod syncser {
     // (B) For word-oriented streams, it might be good to shift in
     //     full words, then allow endianness config in the output
     //     stream.
-   
+
     use sm::Push;
 
     /* SPI clock configurations can be confusing as there are many
     ways to express the same information.  Thus uses the following
     convention:
 
-    - clock_edge: 
+    - clock_edge:
       0  sample on 1->0 transition
       1  sample on 0->1 transition
 
@@ -211,20 +232,20 @@ pub mod syncser {
     phase = 1  (sample on second edge) when clock_edge == clock_polarity
 
     https://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus#Mode_numbers
-    
+
     */
-    
-    #[derive(Copy,Clone)]
+
+    #[derive(Copy, Clone)]
     pub struct Config {
-        pub clock_channel:  usize,
-        pub data_channel:   usize,
-        pub frame_channel:  usize,   // chip select
-        pub clock_edge:     usize,
+        pub clock_channel: usize,
+        pub data_channel: usize,
+        pub frame_channel: usize, // chip select
+        pub clock_edge: usize,
         pub clock_polarity: usize,
-        pub frame_active:   usize,
-        pub frame_timeout:  usize,
-        pub nb_bits:        usize,
-        pub frame_enable:   bool,
+        pub frame_active: usize,
+        pub frame_timeout: usize,
+        pub nb_bits: usize,
+        pub frame_enable: bool,
         pub timeout_enable: bool,
     }
     struct State {
@@ -238,11 +259,11 @@ pub mod syncser {
         pub config: Config,
         state: State,
     }
-    
+
     pub fn config() -> Config {
         Config {
             clock_channel: 0,
-            data_channel:  1,
+            data_channel: 1,
             frame_channel: 0,
             frame_enable: false,
             clock_edge: 1,     // positive edge triggering
@@ -262,20 +283,22 @@ pub mod syncser {
                 frame_timeout_state: 0,
                 shift_count: 0,
                 shift_reg: 0,
-            }
+            },
         }
     }
 
-    impl<B> Push<B,usize> for SyncSer where B: super::Bus {
+    impl<B> Push<B, usize> for SyncSer
+    where
+        B: super::Bus,
+    {
         #[inline(always)]
-        fn push(&mut self, input :B) -> Option<usize> {   
-
+        fn push(&mut self, input: B) -> Option<usize> {
             let s = &mut self.state;
             let c = &self.config;
 
             let clock_bit = input.channel(c.clock_channel);
             let frame_bit = input.channel(c.frame_channel);
-            let data_bit  = input.channel(c.data_channel);
+            let data_bit = input.channel(c.data_channel);
 
             let mut rv = None;
 
@@ -283,7 +306,8 @@ pub mod syncser {
             // FIXME: this should wait to do anything if it starts in the
             // middle of a frame.
             if c.frame_enable {
-                if frame_bit != s.frame_state { // transition
+                if frame_bit != s.frame_state {
+                    // transition
                     if frame_bit == c.frame_active {
                         // reset shift register
                         s.shift_reg = 0;
@@ -291,7 +315,7 @@ pub mod syncser {
                     }
                 }
             }
-            
+
             // Frame timeout.
             if c.timeout_enable {
                 if c.frame_timeout > 0 {
@@ -300,8 +324,7 @@ pub mod syncser {
                         s.shift_reg = 0;
                         s.shift_count = 0;
                         s.frame_timeout_state = c.frame_timeout;
-                    }
-                    else {
+                    } else {
                         s.frame_timeout_state -= 1;
                     }
                 }
@@ -309,12 +332,15 @@ pub mod syncser {
 
             // Shift in data on sampling clock edge.
             if !c.frame_enable || (frame_bit == c.frame_active) {
-                if clock_bit != s.clock_state {  // transition
-                    if clock_bit == c.clock_edge { // sampling edge
-                        s.shift_reg <<= 1; // (A) 
+                if clock_bit != s.clock_state {
+                    // transition
+                    if clock_bit == c.clock_edge {
+                        // sampling edge
+                        s.shift_reg <<= 1; // (A)
                         s.shift_reg |= data_bit;
                         s.shift_count += 1;
-                        if s.shift_count == c.nb_bits { // (B)
+                        if s.shift_count == c.nb_bits {
+                            // (B)
                             rv = Some(s.shift_reg);
                             // reset shift register
                             s.shift_reg = 0;
@@ -335,14 +361,14 @@ pub mod syncser {
     }
 }
 pub mod slip {
-    use sm::Push;
     use sm::Bus;
+    use sm::Push;
     use std::mem;
-    
-    #[derive(Copy,Clone)]
+
+    #[derive(Copy, Clone)]
     pub struct Config {
-        pub end:     u8,
-        pub esc:     u8,
+        pub end: u8,
+        pub esc: u8,
         pub esc_end: u8,
         pub esc_esc: u8,
     }
@@ -352,7 +378,7 @@ pub mod slip {
     }
     pub struct Slip {
         config: Config,
-        state:  State,
+        state: State,
     }
     pub fn init(c: Config) -> Slip {
         Slip {
@@ -360,19 +386,25 @@ pub mod slip {
             state: State {
                 buf: Vec::new(),
                 esc: false,
-            }
+            },
         }
     }
-    impl<B> Push<B,Vec<u8>> for Slip where B: Bus {
+    impl<B> Push<B, Vec<u8>> for Slip
+    where
+        B: Bus,
+    {
         #[inline(always)]
-        fn push(&mut self, input_bus:B) -> Option<Vec<u8>> {
+        fn push(&mut self, input_bus: B) -> Option<Vec<u8>> {
             let c = &self.config;
             let s = &mut self.state;
             let i = input_bus.as_usize() as u8;
             if s.esc {
                 s.esc = false;
-                if      c.esc_end == i { s.buf.push(c.end); }
-                else if c.esc_esc == i { s.buf.push(c.esc); }
+                if c.esc_end == i {
+                    s.buf.push(c.end);
+                } else if c.esc_esc == i {
+                    s.buf.push(c.esc);
+                }
                 return None;
             }
             if c.esc == i {
@@ -389,12 +421,9 @@ pub mod slip {
     }
     pub fn print(v: Vec<u8>) {
         print!("({}) -", v.len());
-        for e in v { print!(" {:01$x}", e, 2); }
+        for e in v {
+            print!(" {:01$x}", e, 2);
+        }
         println!("");
     }
 }
-
-
-
-
-

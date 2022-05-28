@@ -23,13 +23,19 @@ Use `cargo build` to compile the rust code.
 
 Included in the `dev` directory is a C++ wrapper for the Saleae Logic
 8 library.  Use `make -C dev` to download upstream library and build
-the wrapper.
+the wrapper.  But you probably want to use `sigrok` instead:
+
+```
+$ sigrok-cli -d fx2lafw -O binary --continuous --config samplerate=2m  | <my-logan-binary>
+```
+
 
 The `logan` script can be used to start a live analysis session on the
 command line.
 
 There is also Erlang code to wrap the `logan` script in
 `erl/logan.erl`.  This depends on https://github.com/zwizwa/erl_tools
+
 
 
 Status
